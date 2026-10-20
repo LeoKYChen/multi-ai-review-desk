@@ -1,5 +1,6 @@
 /** Browser-assisted mode: the user must paste model replies manually. */
 import { makePrompt } from './models.mjs';
+import { getPreviousReworkNote } from './review-context.mjs';
 const phases=['independent','critique','proposal'];
 const providers=['chatgpt','gemini'];
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
@@ -43,7 +44,8 @@ export async function getManualNext(env,taskId){
  const records=await getRows(env,round.id);
  const next=nextManualStep(records);
  if(!next)return {complete:true,round_id:round.id};
- return {complete:false,round_id:round.id,...next,prompt:makePrompt(task,next.phase,next.provider,records,80000)};
+ const note=await getPreviousReworkNote(env,taskId,round.ordinal);
+ return {complete:false,round_id:round.id,completed_steps:records.length,...next,prompt:makePrompt(task,next.phase,next.provider,records,80000,note)};
 }
 export async function submitManual(env,taskId,input){
  const task=await getTask(env,taskId);

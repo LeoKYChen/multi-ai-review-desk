@@ -70,4 +70,13 @@ python3 test/check_schema.py
 
 ## 使用現有 D1 建立測試站（尚未部署）
 
-新的部署工作流程 `deploy-staging.yml` 採 GitHub Actions opt-in，預設不執行；需由使用者在 GitHub 安全設定頁填入非機密的 D1 與 Cloudflare Account ID，以及部署 Token 與個人登入密碼等 Secrets。步驟見[Cloudflare D1 私人測試站部署指南](../docs/Cloudflare_D1_私人測試站部署指南.md)。只有設定 `ENABLE_STAGING_DEPLOY=true` 且有新的開發分支提交才會啟動部署。正式操作私人文件前，須先啟用 Cloudflare Access。
+新的部署工作流程 `deploy-staging.yml` 採 GitHub Actions opt-in，預設不執行；需由使用者在 GitHub 安全設定頁填入非機密的 D1 與 Cloudflare Account ID，以及部署 Token 與個人登入密碼等 Secrets。步驟見[Cloudflare D1 私人測試站部署指南](../docs/Cloudflare_D1_私人測試站部署指南.md)。目前須從 GitHub Actions 明確手動觸發並通過確認條件才可能部署。正式操作私人文件前，須先啟用 Cloudflare Access。
+
+## v0.7 原文保存、退回重議與 Markdown 匯出
+
+- `GET /api/tasks/:id/export.md`：僅登入使用者可下載此任務的**完整 Markdown 審查歷程**。匯出包含原始指令、Word 擷取文字、每回合 AI 訊息與人工決定；不包含 Word 原始檔位元組。
+- 原文／回覆以動態 Markdown code fence 保留完整字元（包括 Markdown 特殊符號），避免匯出時把文書內的標記誤認成報告章節。來源為手動貼入者明確標示「來源未驗證」。
+- 選擇 `rework` 必須提供非空白理由。下一回合的提示詞保留**前次人類退回理由**，並維持 ChatGPT/Gemini 獨立初稿的隔離。
+- 網頁版顯示六步驟進度。新功能均可在 GitHub Actions 進行單元測試，不需要部署 Cloudflare 或輸入 API Key。
+
+**更正舊版說明：** staging 部署工作已由自動 push 改為需要人工 `workflow_dispatch`、指定確認字串及 `ENABLE_STAGING_DEPLOY=true` 三項條件，不能單靠 push 自動部署。

@@ -4,6 +4,8 @@ import { callModel, makePrompt, ready } from './models.mjs';
 import { hasHumanAuth, login, logoutHeaders } from './session.mjs';
 import { beginManual, getManualNext, submitManual } from './manual.mjs';
 import { guardedLogin, apiEnabled, reserveModelCall, markModelCall, modelCallCaps } from './guardrails.mjs';
+import { renderTaskMarkdown } from './export.mjs';
+import { getPreviousReworkNote } from './review-context.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -42,13 +44,14 @@ async function createTask(req,env){
   .bind(id,title.trim(),instruction.trim(),documentText,documentName,'new',now,now,mode).run();
  return respond({id,title:title.trim(),status:'new',mode,document_name:documentName,extracted_characters:documentText.length,warnings},201);
 }
-async function detail(env,id){
+async function readFullTask(env,id){
  const t=await task(env,id);
  const rounds=(await env.DB.prepare('SELECT * FROM task_rounds WHERE task_id=? ORDER BY ordinal').bind(id).all()).results;
  const result=[];
  for(const r of rounds){const outputs=await recordsFor(env,r.id);const review=await env.DB.prepare('SELECT decision,note,created_at FROM human_decisions WHERE round_id=?').bind(r.id).first();result.push({...r,outputs,review});}
- return respond({...t,rounds:result});
+ return {...t,rounds:result};
 }
+async function detail(env,id){return respond(await readFullTask(env,id));}
 async function newRound(env,taskId){
  const t=await task(env,taskId);assert(['new','needs_rework','failed'].includes(t.status),409,'任務狀態不可建立新回合');
  const prev=await env.DB.prepare('SELECT COALESCE(MAX(ordinal),0) AS n FROM task_rounds WHERE task_id=?').bind(taskId).first();
@@ -80,7 +83,10 @@ async function advance(env,taskId,fetcher){
  if(phaseIdx>0)assert(records.filter(x=>x.phase===phases[phaseIdx-1]).length===2,409,'前一階段尚未完成');
  const missing=['chatgpt','gemini'].filter(p=>!records.some(x=>x.provider===p&&x.phase===phase));
  let prompts;
- try {prompts=missing.map(provider=>({provider,prompt:makePrompt(t,phase,provider,records)}));}
+ try {
+  const reviewNote=await getPreviousReworkNote(env,taskId,round.ordinal);
+  prompts=missing.map(provider=>({provider,prompt:makePrompt(t,phase,provider,records,24000,reviewNote)}));
+ }
  catch(e){fail(422,e.message);}
  const replies=await Promise.allSettled(prompts.map(async x=>{
    // Reservation counts attempts, even if the provider times out or fails.
@@ -119,6 +125,7 @@ async function humanReview(env,taskId,req){
  const input=await body(req);
  assert(input&&['accept_chatgpt','accept_gemini','partial','reject','rework'].includes(input.decision)&&validText(input.note,10000),422,'審查內容有誤');
  const t=await task(env,taskId);assert(t.status==='awaiting_human',409,'兩位 AI 尚未各自提出修正建議');
+ if(input.decision==='rework')assert(!!input.note?.trim(),422,'退回重新討論時，請填寫具體理由，供下一回合使用');
  const round=await roundFor(env,taskId);assert(round?.state==='awaiting_human',409,'回合尚未進入人工審查');
  const now=iso(),status=input.decision==='rework'?'needs_rework':'closed';
  await env.DB.batch([
@@ -143,6 +150,11 @@ export default {async fetch(req,env){
   if(pathname==='/api/tasks'&&req.method==='POST')return await createTask(req,env);
   if(pathname==='/api/tasks'&&req.method==='GET'){
    const rows=(await env.DB.prepare('SELECT id,title,status,mode,document_name,created_at FROM tasks ORDER BY created_at DESC LIMIT 100').all()).results;return respond({tasks:rows});
+  }
+  const exportRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/export\.md$/);
+  if(exportRoute&&req.method==='GET'){
+   const content=renderTaskMarkdown(await readFullTask(env,exportRoute[1]));
+   return new Response(content,{status:200,headers:{...jsonHeaders,'Content-Type':'text/markdown; charset=utf-8','Content-Disposition':`attachment; filename="multi-ai-task-${exportRoute[1]}.md"`}});
   }
   const manualRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/manual-(begin|next|output)$/);
   if(manualRoute){

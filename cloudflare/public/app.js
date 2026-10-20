@@ -73,7 +73,7 @@ async function loadManualNext(taskId){
  $('manual-step').classList.toggle('hidden',!!info.complete);
  if(info.complete){showAlert('兩個 AI 的六份回覆已完成，請由你審查。');return;}
  const name=info.provider==='chatgpt'?'ChatGPT':'Gemini';
- $('manual-heading').textContent=`${name} · ${phaseLabel[info.phase]}`;
+ $('manual-heading').textContent=`步驟 ${Math.min(6,info.completed_steps+1)}／6 · ${name} · ${phaseLabel[info.phase]}`;
  $('manual-prompt').value=info.prompt;
  $('manual-answer').value='';
 }
@@ -105,4 +105,28 @@ $('manual-form').addEventListener('submit',async ev=>{
   showAlert(result.completed?'六份回覆已儲存，等待你的最終審查。':'已儲存這份回覆，請接續下一個 AI 階段。');
  }catch(e){showAlert(e.message,true);}
  finally{btn.disabled=false;}
+});
+
+$('export-md').addEventListener('click',async()=>{
+ if(!activeTask)return;
+ const id=activeTask.id,button=$('export-md');button.disabled=true;
+ try{
+  const result=await fetch(`/api/tasks/${id}/export.md`,{credentials:'same-origin'});
+  if(!result.ok){
+   let problem;try{problem=await result.json();}catch{problem={};}
+   throw new Error(problem.error||'匯出失敗');
+  }
+  const blob=await result.blob();
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`multi-ai-task-${id}.md`;
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  showAlert('完整任務紀錄已下載為 Markdown，請妥善保管內含的私人文字。');
+ }catch(e){showAlert(e.message,true);}
+ finally{button.disabled=false;}
+});
+$('decision').addEventListener('change',()=>{
+ const rework=$('decision').value==='rework';
+ $('review-note').required=rework;
+ $('review-note').placeholder=rework?'請具體說明需要重議的問題；下回合會傳給兩個 AI':'記錄採納理由或審查要求';
 });
