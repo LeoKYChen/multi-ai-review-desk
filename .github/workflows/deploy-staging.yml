@@ -14,7 +14,7 @@ concurrency:
 jobs:
   deploy:
     # Both explicit manual confirmation and a repository variable are required.
-    if: ${{ inputs.confirm == 'deploy-private-staging' && vars.ENABLE_STAGING_DEPLOY == 'true' }}
+    if: ${{ inputs.confirm == 'deploy-private-staging' && vars.ENABLE_STAGING_DEPLOY == 'true' && vars.ACCESS_POLICY_VERIFIED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: cloudflare-staging
@@ -50,6 +50,12 @@ jobs:
       - name: Generate staging Wrangler config
         working-directory: cloudflare
         run: node scripts/prepare-staging.mjs
+      - name: Assert no public workers.dev address or paid AI calls
+        shell: bash
+        run: |
+          grep -qx 'workers_dev = false' cloudflare/wrangler.toml
+          grep -qx 'MODEL_API_ENABLED = "false"' cloudflare/wrangler.toml
+          grep -qx 'BACKGROUND_JOBS_ENABLED = "false"' cloudflare/wrangler.toml
       - name: Preview unapplied D1 migrations
         working-directory: cloudflare
         env:

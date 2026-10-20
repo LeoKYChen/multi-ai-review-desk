@@ -15,7 +15,7 @@ let config = readFileSync(join(projectRoot, 'wrangler.toml.example'), 'utf8');
 if (!config.includes('REPLACE_WITH_YOUR_D1_DATABASE_ID')) throw new Error('找不到設定檔中的 D1 佔位字串');
 config = config.replace('REPLACE_WITH_YOUR_D1_DATABASE_ID', dbId);
 config = config.replace(/^name = "multi-ai-review-desk"$/m, 'name = "multi-ai-review-desk-staging"');
-config += '\n[vars]\nMODEL_API_ENABLED = "false"\nMODEL_MAX_CALLS_PER_TASK = "12"\nMODEL_MAX_CALLS_PER_DAY = "12"\n';
+config += '\n[vars]\nMODEL_API_ENABLED = "false"\nBACKGROUND_JOBS_ENABLED = "false"\nMODEL_MAX_CALLS_PER_TASK = "12"\nMODEL_MAX_CALLS_PER_DAY = "12"\n';
 const out = join(projectRoot, 'wrangler.toml');
 if (existsSync(out)) throw new Error('已存在 wrangler.toml；為避免覆蓋既有設定，請在乾淨的部署工作目錄執行');
 writeFileSync(out, config, { mode: 0o600 });

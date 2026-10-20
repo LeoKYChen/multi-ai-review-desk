@@ -78,3 +78,9 @@ node tools/convert-offline-backup.mjs "你的離線備份.json"
 [開啟 v0.9 單檔 HTML](offline/index.html)｜[保留已驗收的 v0.8 原檔](offline/v0.8.html)｜[v0.9 使用說明](offline/v0.9-操作說明.md)
 
 v0.9 增加歷次回合切換、同一階段 ChatGPT／Gemini 雙欄並排對照、人工採納／退回理由及日期檢視。切換歷史為唯讀，不改變最新回合審查、原文及未送出的回覆。**JSON 備份仍採 v0.8 格式，不需搬遷**。離線版已完成 Chromium 的回合切換及備份還原測試；Cloudflare 仍未部署。
+
+## v1.0 純雲端版：背景自動審查原型（不接觸憑證）
+
+新增 [背景 Queue 工作設計](docs/v1.0-純雲端背景審查.md)：使用者按「開始」後，由 Cloudflare Queue 在背景逐階段協調 ChatGPT 與 Gemini，與瀏覽器是否開啟無關。新增 D1 migration 0006 作為重複派工保護；失敗後停止自動重試付費請求，保留原文、歷次意見與人工決定。
+
+**目前只是程式與無網路模擬測試：沒有建立 Queue，沒有真實登入 Cloudflare，沒有呼叫任何 AI API，沒有部署網站。** `BACKGROUND_JOBS_ENABLED=false`、`MODEL_API_ENABLED=false` 為預設。正式功能仍需私人 Access 政策、Cloudflare 授權、兩個模型的正式 API 授權及費用確認；依使用者指示，至此停止任何真實授權操作。

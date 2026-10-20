@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 let activeTask=null, activeManualStep=null, modelsConfigured=false, working=false;
 const roundView={taskId:null,ordinal:null,phase:'all'};
-let listVersion=0,searchTimer=null;
+let listVersion=0,searchTimer=null,backgroundTimer=null;
 const statusLabel={new:'尚未開始',running:'AI 審查中',awaiting_human:'待你審查',needs_rework:'退回重議',closed:'已由你結案',failed:'執行失敗'};
 const phaseLabel={independent:'第一階段｜獨立分析',critique:'第二階段｜交叉審查',proposal:'第三階段｜個別修正建議'};
 function showAlert(message,error=false){const el=$('notice');el.textContent=String(message);el.classList.toggle('error',error);el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),6500);}
@@ -17,7 +17,7 @@ async function refreshSettings(){const data=await api('/settings');modelsConfigu
 function updateRun(){
  const el=$('run');const apiMode=activeTask?.mode!=='manual';
  el.classList.toggle('hidden',!apiMode);
- el.disabled=working||!activeTask||!modelsConfigured||!['new','running','needs_rework','failed'].includes(activeTask.status);
+ el.disabled=working||!activeTask||!modelsConfigured||activeTask.queue_requested===1||!['new','running','needs_rework','failed'].includes(activeTask.status);
 }
 function cell(text,cls){const el=document.createElement('div');if(cls)el.className=cls;el.textContent=text;return el;}
 function phaseNode(name,text){const root=cell('','phase');const strong=document.createElement('strong');strong.textContent=phaseLabel[name];root.append(strong,cell(text||'尚未執行'));return root;}
@@ -71,11 +71,19 @@ function renderDetail(task){
  $('progress-label').textContent=last?`第 ${last.ordinal} 回合 · ${completed}／6 份 AI 回覆`:'尚未開始';
  $('progress-fill').style.width=(Math.min(6,completed)/6*100)+'%';
  showRoundHistory(task);
- $('run-hint').textContent= manual?'網頁版輔助模式：需要你在 ChatGPT、Gemini 網頁操作，並把每次回覆貼回工作臺。':!modelsConfigured?'尚未設定模型 API，不會自動產生模擬結果。':task.status==='awaiting_human'?'兩位 AI 均已提出建議，請由你決定。':task.status==='closed'?'此任務已由你結案。':'點一次按鈕，系統會依序完成獨立分析、交叉審查、各自提出建議。';
+ $('run-hint').textContent=task.queue_requested===1?'已交由雲端背景佇列執行；可關閉瀏覽器，回來後查看進度。':manual?'網頁版輔助模式：需要你在 ChatGPT、Gemini 網頁操作，並把每次回覆貼回工作臺。':!modelsConfigured?'尚未設定模型 API，不會自動產生模擬結果。':task.status==='awaiting_human'?'兩位 AI 均已提出建議，請由你決定。':task.status==='closed'?'此任務已由你結案。':'點一次按鈕，系統會依序完成獨立分析、交叉審查、各自提出建議。';
  updateRun();
 }
 async function loadTask(id){
  const data=await api('/tasks/'+id);renderDetail(data);
+ if(backgroundTimer)clearTimeout(backgroundTimer);
+ if(data.mode==='api'&&data.queue_requested===1){
+  backgroundTimer=setTimeout(async()=>{
+   if(activeTask?.id!==id)return;
+   try{await Promise.all([loadTask(id),loadList()]);}
+   catch(e){showAlert('無法更新背景審查狀態：'+e.message,true);}
+  },3000);
+ }
  if(data.mode==='manual'&&data.status==='running')await loadManualNext(id);
 }
 async function loadList(){
@@ -108,7 +116,8 @@ $('run').addEventListener('click',async()=>{if(!activeTask||working||!modelsConf
   showAlert(`雙 AI 執行中，第 ${step+1} 個階段／補跑步驟。模型請求可能需要等待。`);
   const result=await api(`/tasks/${id}/advance`,{method:'POST'});
   await loadTask(id);
-  if(result.errors?.length){showAlert(`部分模型未完成：${result.errors.map(x=>x.provider+' '+x.message).join('；')}。請再按一次接續。`,true);break;}
+  if(result.queued){showAlert('背景佇列已接收工作，可離開網頁；重新開啟後可查看最新進度。');break;}
+  if(result.errors?.length){showAlert(`部分模型未完成：${result.errors.map(x=>x.provider+' '+x.message).join('；')}。請檢查原因後再按一次接續（可能額外計費）。`,true);break;}
   if(result.status==='awaiting_human'){showAlert('兩個 AI 都已提交最終修正建議，請由你審查。');break;}
  }
  await loadList();

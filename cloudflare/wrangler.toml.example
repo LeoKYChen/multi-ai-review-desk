@@ -2,7 +2,7 @@ name = "multi-ai-review-desk"
 main = "src/worker.mjs"
 compatibility_date = "2026-10-20"
 compatibility_flags = ["nodejs_compat"]
-workers_dev = true
+workers_dev = false
 
 [assets]
 directory = "./public"
@@ -26,3 +26,14 @@ migrations_dir = "migrations"
 # MODEL_API_ENABLED = "false"
 # MODEL_MAX_CALLS_PER_TASK = "12"
 # MODEL_MAX_CALLS_PER_DAY = "12"
+
+# v1.0 background AI review is disabled by default.
+# Queue bindings must be configured and provisioned only after Access + API authorization.
+# BACKGROUND_JOBS_ENABLED = "false"
+# [[queues.producers]]
+# queue = "multi-ai-review-desk-tasks"
+# binding = "AI_REVIEW_QUEUE"
+# [[queues.consumers]]
+# queue = "multi-ai-review-desk-tasks"
+# max_batch_size = 1
+# max_retries = 1

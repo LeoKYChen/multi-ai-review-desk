@@ -7,6 +7,7 @@ import { guardedLogin, apiEnabled, reserveModelCall, markModelCall, modelCallCap
 import { renderTaskMarkdown } from './export.mjs';
 import { getPreviousReworkNote } from './review-context.mjs';
 import {parseTaskFilters,buildTaskListQuery} from './task-query.mjs';
+import { backgroundSelected, enqueueReview, consumeReviewMessage } from './background-review.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -172,7 +173,10 @@ export default {async fetch(req,env){
   if(matched){
    const [,id,action]=matched;
    if(req.method==='GET'&&!action)return await detail(env,id);
-   if(req.method==='POST'&&action==='advance')return await advance(env,id,fetch);
+   if(req.method==='POST'&&action==='advance'){
+    if(backgroundSelected(env))return respond(await enqueueReview(env,id,{ready,apiEnabled}),202);
+    return await advance(env,id,fetch);
+   }
    if(req.method==='POST'&&action==='review')return await humanReview(env,id,req);
   }
   return respond({error:'Not Found'},404);
@@ -180,4 +184,10 @@ export default {async fetch(req,env){
   const status=err.status||(err.message?.startsWith('DOCX_')?422:500);
   return respond({error:status===500?'處理失敗':err.message},status);
  }
-}};
+},
+ async queue(batch,env){
+  for(const message of batch.messages){
+   await consumeReviewMessage(message,env,{advance:async(e,taskId)=>advance(e,taskId,fetch),ready,apiEnabled});
+  }
+ }
+};

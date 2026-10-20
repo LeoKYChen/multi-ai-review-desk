@@ -36,3 +36,9 @@ assert conn.execute("SELECT category FROM tasks WHERE id='test-id'").fetchone()[
 conn.execute("UPDATE tasks SET category='文件審查' WHERE id='test-id'")
 assert conn.execute("SELECT document_text FROM tasks WHERE id='test-id'").fetchone()[0]=='Word文字'
 print('PASS: v0.8 category migration and source preservation')
+
+# Queue migration is state-only: no model calls and no mutation to original task text.
+assert 'queue_requested' in [row[1] for row in conn.execute('PRAGMA table_info(tasks)')]
+assert conn.execute("SELECT queue_requested FROM tasks WHERE id='test-id'").fetchone()[0] == 0
+assert conn.execute("SELECT document_text FROM tasks WHERE id='test-id'").fetchone()[0] == 'Word文字'
+print('PASS: background queue migration 0006 is inert and preserves original text')

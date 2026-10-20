@@ -93,3 +93,12 @@ python3 test/check_schema.py
 ## v0.9 前端開發：歷次回合比較（尚未部署）
 
 已同步離線版的歷次回合閱讀模式至雲端前端程式：可切換回合、只看某一階段 ChatGPT 與 Gemini 的意見、檢視該回合人工採納或退回的說明。瀏覽歷史時不能對舊回合送出新核定；最新回合的 AI 執行進度與提交流程不受歷史篩選影響。資料庫仍使用原有 task_rounds / ai_outputs / human_decisions，不需新增 D1 migration。本功能只完成程式與 CI 語法、結構測試，**未實際部署到 Cloudflare，也未在遠端瀏覽器驗收**。
+
+## v1.0 Queue 背景執行：目前僅無憑證測試
+
+- `src/background-review.mjs`、migration `0006_background_queue.sql` 新增背景排程。Queue 訊息只存 UUID，**沒有 Word 原文或模型 API Key**。
+- `POST /api/tasks/:id/advance` 在 `BACKGROUND_JOBS_ENABLED=true` 且兩家模型 API 與 Queue binding 都已完整設定時，只負責 enqueue，回傳 HTTP 202；Queue consumer 在用戶離線後接續執行。
+- 若背景模式未啟用，維持原有手動觸發 API 步驟的開發行為；**這不等於正式的一鍵全自動功能**。
+- 階段成功才派送下一個 Queue 工作；模型失敗不重複自動付費，須由使用者決定是否再次繼續。
+- 使用者不願提供 Key/Token 時，不會建立 Queue、開啟付費 API 或部署。
+- 防公開部署：`wrangler.toml.example` 以 `workers_dev=false` 作為預設；手動 staging 部署需額外滿足 `ACCESS_POLICY_VERIFIED=true`，否則工作直接跳過。這個變數本身不是 Access 的密碼學證明，**仍需在 Cloudflare 實際驗收 Access 政策**。
