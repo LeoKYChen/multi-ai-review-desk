@@ -4,9 +4,9 @@ const PROVIDERS = ['chatgpt', 'gemini'];
 export function ready(env) {
  return !!(env.OPENAI_API_KEY && env.OPENAI_MODEL && env.GEMINI_API_KEY && env.GEMINI_MODEL);
 }
-export function makePrompt(task, phase, provider, records) {
+export function makePrompt(task, phase, provider, records, maxLength=24000) {
  const input = `任務：${task.title}\n交辦指令：${task.instruction}\n\nWord 擷取文字：\n${task.document_text || '(未附 Word 文件)'}`;
- if (input.length > 24000) throw new Error('交辦內容超過本版本模型輸入上限 24,000 字元，請拆分任務；原始 D1 紀錄不受影響');
+ if (input.length > maxLength) throw new Error('交辦內容超過此模式支援的輸入上限，請拆分任務；原始 D1 紀錄不受影響');
  if (phase === 'independent') return `${input}\n\n【第一階段：獨立分析】請獨立提出初步意見，尚不可看到其他 AI 的答案。指出理由及不確定事項。`;
  const get = (p,s) => records.find(x=>x.provider===p&&x.phase===s)?.body || '';
  const initial = PROVIDERS.map(p=>`【${p} 的獨立初稿】\n${get(p,'independent')}`).join('\n\n');

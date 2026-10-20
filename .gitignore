@@ -8,3 +8,6 @@ cloudflare/.wrangler/
 cloudflare/node_modules/
 **/.env.*
 cloudflare/wrangler.toml
+
+private-backups/
+**/private-backups/

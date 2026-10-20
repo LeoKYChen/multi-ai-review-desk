@@ -57,3 +57,13 @@ python3 test/check_schema.py
 ## 測試內容
 
 `npm test` 包含 DOCX 文字解析、登入 Cookie、防跨來源請求、模型初稿隔離、交叉審查上下文、API 參數與模型錯誤遮蔽。另以 SQLite 測試 D1 建表、原文不可覆寫及重複請求鎖定。
+
+## v0.5 安全及成本護欄
+
+- 系統會以 D1 記錄登入失敗。相同來源在 15 分鐘內連續錯誤達 5 次，暫停登入 15 分鐘；此措施仍需搭配 Cloudflare Access/其他邊緣流量防護。
+- 伺服器需明確設 `MODEL_API_ENABLED=true` 才能開啟模型 API。僅設定 API Key 不會發出模型請求。
+- `MODEL_MAX_CALLS_PER_TASK` 預設 12 次，`MODEL_MAX_CALLS_PER_DAY` 預設 12 次；皆是**呼叫嘗試次數**，失敗也會計入，並非實際計費上限或美元上限。建議先設低一些（例如每天 4 次）進行測試。
+- `npm run backup:remote`：由使用者本機執行 `wrangler d1 export --remote` 匯出完整 SQL，保存至儲存庫外的 `private-backups/`。備份內容可能涉及個人資訊，應放在加密磁碟及安全位置，不要提交 GitHub。
+- 重建資料庫前先備份，回復作業應先在**另一個測試用 D1 資料庫**驗證 SQL 匯入，不可未核對就覆蓋正式資料。官方參考：https://developers.cloudflare.com/d1/best-practices/import-export-data/
+
+注意：此版還未經真實 Cloudflare Worker/D1 部署、真實 API 帳號及網路安全壓力測試；切勿誤認已達生產環境驗收標準。

@@ -21,3 +21,8 @@ migrations_dir = "migrations"
 # npx wrangler secret put OPENAI_API_KEY
 # npx wrangler secret put GEMINI_API_KEY
 # OPENAI_MODEL and GEMINI_MODEL must be configured separately; model names are not assumed.
+
+# Paid model requests are disabled unless explicitly enabled.
+# MODEL_API_ENABLED = "false"
+# MODEL_MAX_CALLS_PER_TASK = "12"
+# MODEL_MAX_CALLS_PER_DAY = "12"

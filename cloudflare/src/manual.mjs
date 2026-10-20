@@ -43,7 +43,7 @@ export async function getManualNext(env,taskId){
  const records=await getRows(env,round.id);
  const next=nextManualStep(records);
  if(!next)return {complete:true,round_id:round.id};
- return {complete:false,round_id:round.id,...next,prompt:makePrompt(task,next.phase,next.provider,records)};
+ return {complete:false,round_id:round.id,...next,prompt:makePrompt(task,next.phase,next.provider,records,80000)};
 }
 export async function submitManual(env,taskId,input){
  const task=await getTask(env,taskId);

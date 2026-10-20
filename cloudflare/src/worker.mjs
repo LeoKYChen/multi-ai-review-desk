@@ -3,6 +3,7 @@ import { extractDocxText, MAX_DOCX_BYTES } from './docx.mjs';
 import { callModel, makePrompt, ready } from './models.mjs';
 import { hasHumanAuth, login, logoutHeaders } from './session.mjs';
 import { beginManual, getManualNext, submitManual } from './manual.mjs';
+import { guardedLogin, apiEnabled, reserveModelCall, markModelCall, modelCallCaps } from './guardrails.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -60,7 +61,7 @@ async function newRound(env,taskId){
 }
 const phases=['independent','critique','proposal'];
 async function advance(env,taskId,fetcher){
- assert(ready(env),409,'尚未設定 OpenAI 與 Gemini 的 API 憑證及模型；不會啟動或假裝完成 AI 審查');
+ assert(ready(env)&&apiEnabled(env),409,'API 自動執行未啟用或缺少模型憑證；不會產生模擬結果，也不會向 API 計費');
  const t=await task(env,taskId);
  assert(t.mode==='api',409,'此任務使用網頁版輔助模式，請從手動審查畫面操作');
  assert(['new','needs_rework','running','failed'].includes(t.status),409,'這張任務不能啟動 AI');
@@ -81,7 +82,18 @@ async function advance(env,taskId,fetcher){
  let prompts;
  try {prompts=missing.map(provider=>({provider,prompt:makePrompt(t,phase,provider,records)}));}
  catch(e){fail(422,e.message);}
- const replies=await Promise.allSettled(prompts.map(async x=>({provider:x.provider,text:await callModel(x.provider,env,x.prompt,fetcher)})));
+ const replies=await Promise.allSettled(prompts.map(async x=>{
+   // Reservation counts attempts, even if the provider times out or fails.
+   const reservation=await reserveModelCall(env,{taskId,roundId:round.id,provider:x.provider,phase});
+   try {
+    const text=await callModel(x.provider,env,x.prompt,fetcher);
+    await markModelCall(env,reservation,true);
+    return {provider:x.provider,text};
+   } catch (e) {
+    await markModelCall(env,reservation,false);
+    throw e;
+   }
+  }));
  const errors=[];let successful=0;
  for(let i=0;i<replies.length;i++){
   const result=replies[i];
@@ -121,13 +133,13 @@ export default {async fetch(req,env){
   assert(env?.DB,503,'尚未設定 D1 資料庫');sameOrigin(req);
   const pathname=new URL(req.url).pathname;
   if(pathname==='/api/login'&&req.method==='POST'){
-   const result=await login(req,env);return respond(result.data,200,result.headers);
+   const result=await guardedLogin(req,env,login);return respond(result.data,200,result.headers);
   }
   if(pathname==='/api/session'&&req.method==='GET')return respond({authenticated:await hasHumanAuth(req,env)});
   if(pathname==='/api/logout'&&req.method==='POST')return respond({authenticated:false},200,logoutHeaders());
   assert(await hasHumanAuth(req,env),401,'請先登入');
-  if(pathname==='/api/health'&&req.method==='GET')return respond({ok:true,storage:'D1',models_configured:ready(env)});
-  if(pathname==='/api/settings'&&req.method==='GET')return respond({models_configured:ready(env),manual_mode_available:true,provider_names:['chatgpt','gemini'],uses_paid_api_credentials:true});
+  if(pathname==='/api/health'&&req.method==='GET')return respond({ok:true,storage:'D1',models_configured:ready(env)&&apiEnabled(env)});
+  if(pathname==='/api/settings'&&req.method==='GET')return respond({models_configured:ready(env)&&apiEnabled(env),manual_mode_available:true,api_enabled:apiEnabled(env),api_call_caps:modelCallCaps(env),provider_names:['chatgpt','gemini'],uses_paid_api_credentials:true});
   if(pathname==='/api/tasks'&&req.method==='POST')return await createTask(req,env);
   if(pathname==='/api/tasks'&&req.method==='GET'){
    const rows=(await env.DB.prepare('SELECT id,title,status,mode,document_name,created_at FROM tasks ORDER BY created_at DESC LIMIT 100').all()).results;return respond({tasks:rows});

@@ -4,7 +4,7 @@
 
 你只需交辦一次，**ChatGPT／OpenAI API** 與 **Gemini API** 即可各自分析、互相交換意見，再各自提出修正建議；**只有你能決定採納、退回或結案**。
 
-**目前版本為 v0.4.0 開發原型**，完成前後端程式與本機自動測試，尚未部署 Cloudflare D1/Workers，也尚未取得或驗證真實模型 API 憑證。
+**目前版本為 v0.5.0 開發原型**，完成前後端程式與本機自動測試，尚未部署 Cloudflare D1/Workers，也尚未取得或驗證真實模型 API 憑證。
 
 ## 架構
 - Cloudflare Workers：網頁、任務控制、模型 API 呼叫。
@@ -24,3 +24,9 @@
 實際 Cloudflare Worker/D1 部署與端對端驗收；模型 API 憑證及個人預算確認；登入限速及私有存取防護；D1 備份與復原測試。**不要將 API Key 或工作臺登入密碼提交到 GitHub。**
 
 程式參考開源專案 [Feedback Desk](https://github.com/aixwangtw/feedback-desk) 的任務協作概念，但目前不是完整 fork。
+
+## v0.5 登入、費用與備份防護
+- 登入失敗採 D1 15 分鐘視窗限制；IP 僅以 HMAC 雜湊儲存，不寫入原始 IP。
+- 真實模型 API 呼叫採 **預設關閉**，必須由使用者在 Cloudflare 伺服器環境明確設 `MODEL_API_ENABLED=true` 才能啟動。
+- 預設最多每個任務 12 次、全站每天 12 次模型**呼叫嘗試**；單次失敗也計入，以免重試意外增加帳單。這是次數上限，不是金額保證。
+- 手動匯出 D1 SQL 備份：`cd cloudflare && npm run backup:remote`（僅使用者本機執行，需要 Wrangler 登入；備份不會上傳 GitHub）。
