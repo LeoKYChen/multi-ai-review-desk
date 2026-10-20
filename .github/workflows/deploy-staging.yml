@@ -1,8 +1,11 @@
 name: Deploy Cloudflare staging (opt-in)
 on:
-  push:
-    branches:
-      - feat/d1-docx-review-v020
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type deploy-private-staging after Cloudflare Access plan is ready"
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -10,8 +13,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    # Setting this variable alone does not deploy; a subsequent push is needed.
-    if: ${{ vars.ENABLE_STAGING_DEPLOY == 'true' }}
+    # Both explicit manual confirmation and a repository variable are required.
+    if: ${{ inputs.confirm == 'deploy-private-staging' && vars.ENABLE_STAGING_DEPLOY == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: cloudflare-staging
