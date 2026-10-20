@@ -3,16 +3,31 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.8 離線版</title>
+<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.9 離線版</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;color-scheme:light;--bg:#f2f5f8;--ink:#172b40;--muted:#607385;--accent:#2a648f;--border:#dce5ee;--success:#20704a;--warn:#9c501c}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:1260px;margin:auto;padding:22px 20px 70px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px}.identity{display:flex;align-items:center;gap:12px}.symbol{background:#1e3b56;color:white;border-radius:11px;padding:12px 15px;font-size:19px}h1{font-size:24px;margin:0}h2{font-size:19px;margin:0 0 16px}h3{font-size:16px;margin:0 0 12px}p{line-height:1.65}.sub{color:var(--muted);font-size:13px;line-height:1.6}.pill{font-size:12px;background:#e6f2f6;color:#215a78;border-radius:15px;padding:7px 11px;white-space:nowrap}.pill.good{background:#e5f4e9;color:var(--success)}.pill.bad{background:#fff0e7;color:var(--warn)}.warning{margin-top:19px;border:1px solid #f0d5a8;background:#fff7e9;border-radius:12px;padding:13px 16px;font-size:13px;line-height:1.7}.layout{display:grid;grid-template-columns:365px minmax(0,1fr);gap:18px;margin-top:20px}.panel{background:white;border:1px solid var(--border);border-radius:15px;padding:22px;box-shadow:0 2px 12px #152e3b08}.field{display:grid;gap:7px;margin-bottom:15px}label{font-weight:700;font-size:13px}input,textarea,select{font:inherit;font-size:14px;border-radius:9px;border:1px solid #bfcfdb;padding:11px 12px;color:#1c2d3c;background:#fcfdff;width:100%;outline-color:var(--accent)}textarea{resize:vertical;line-height:1.6}button{font:inherit;font-size:13px;font-weight:700;border:1px solid #284963;background:#284963;color:#fff;padding:10px 14px;border-radius:9px;cursor:pointer}button:hover{filter:brightness(1.10)}button:disabled{opacity:.5;cursor:not-allowed}button.secondary{background:white;color:#284963;border-color:#bccddb}button.danger{background:white;color:#a14135;border-color:#e7bab7}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.small{font-size:12px}.hidden{display:none!important}.divider{border-top:1px solid var(--border);margin:18px 0}.board{display:grid;grid-template-columns:1fr 1fr;gap:12px}.lane{padding:15px;border-radius:12px;border:1px solid var(--border);min-width:0}.lane h3{padding-bottom:10px;border-bottom:1px solid var(--border)}.stage{background:#f7fafc;border-radius:9px;padding:12px;margin:9px 0}.stage .title{font-size:12px;font-weight:750;color:#2c5c7f;margin-bottom:7px}.stage .body{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;max-height:260px;overflow:auto}.view{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;background:#f7fafc;padding:14px;border-radius:10px;max-height:190px;overflow:auto}.step{border:1px solid #b8d8eb;background:#f6fbff;border-radius:13px;padding:17px;margin-bottom:16px}.history{font-size:13px;color:#475c6a;line-height:1.8}.notice{position:fixed;bottom:20px;right:20px;padding:12px 16px;background:#17384b;color:#fff;border-radius:10px;max-width:440px;box-shadow:0 4px 24px #0002;font-size:13px;z-index:30}.count{color:#2c6488;font-weight:750;font-size:12px}.button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.button-row button{flex:1}#project-pane{min-width:0}.tasks{display:grid;gap:8px;max-height:300px;overflow:auto;margin:12px 0}.task{display:block;text-align:left;width:100%;background:#fff;color:var(--ink);border:1px solid var(--border);padding:11px 12px;font-weight:400}.task.active{background:#edf7fc;border-color:var(--accent)}.task strong,.task small{display:block;word-break:break-word}.task small{font-size:11px;color:var(--muted);margin-top:5px}.task-head{font-size:14px}.progress{height:7px;background:#e3ebf1;border-radius:9px;overflow:hidden;margin:9px 0 16px}.progress div{background:#2c719e;height:100%;transition:width .2s}.bar{background:#fbfcfe;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:18px}.button-row.inline{justify-content:flex-end}.button-row.inline button{flex:unset}.list-title{margin-top:18px;font-size:14px}.muted-small{font-size:12px;color:var(--muted);line-height:1.6}.word-label{font-size:12px;color:var(--success)}.link{color:var(--accent);text-decoration:none}.link:hover{text-decoration:underline}
+.round-reader{margin:18px 0 14px;border:1px solid var(--border);border-radius:12px;background:#fbfdff;padding:14px}
+.reader-controls{display:grid;grid-template-columns:minmax(175px,1fr) minmax(175px,1fr) auto;gap:10px;align-items:end}
+.reader-controls .field{margin-bottom:0}.reader-controls .field select{min-width:0}
+.reader-caption{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.65}
+.round-review{background:#f4faf6;border:1px solid #c7dfd0;border-radius:11px;margin-top:14px;padding:14px 16px}
+.round-review.pending{background:#f7f9fc;border-color:var(--border)}
+.round-review strong{display:block;margin-bottom:6px}
+.round-review .review-note{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.7}
+.history-entry{border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin:8px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.history-entry.selected{border-color:var(--accent);background:#edf7fc}
+.history-entry .history-copy{min-width:0;overflow-wrap:anywhere}
+.history-entry .history-note{white-space:pre-wrap;overflow-wrap:anywhere;color:#526c7c;font-size:12px}
+.stage .body{max-height:330px}
+@media(max-width:750px){.reader-controls{grid-template-columns:1fr 1fr}.reader-controls>button{grid-column:1/-1}}
+@media(max-width:500px){.reader-controls{grid-template-columns:1fr}.reader-controls>button{grid-column:auto}}
 @media(max-width:850px){.layout{grid-template-columns:1fr}.board{grid-template-columns:1fr}.top{align-items:flex-start;flex-wrap:wrap}.panel{padding:17px}main{padding:16px 13px 60px}.button-row button{flex:auto}}
 </style>
 </head>
 <body>
 <main>
-<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">ChatGPT × Gemini · 離線工作流程 · 本機自動儲存</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.8</span></div></header>
+<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">ChatGPT × Gemini · 離線工作流程 · 本機自動儲存</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.9</span></div></header>
 <div class="warning"><strong>離線模式：</strong>本檔案不連線 D1、不呼叫任何模型 API。開啟 ChatGPT/Gemini 按鈕才會前往其網站。任務會儲存在<strong>這個瀏覽器的本機儲存區（未加密）</strong>；若清除瀏覽器資料、使用無痕模式或改用其他裝置／檔案路徑，可能無法讀取。<strong>請定期匯出 JSON 備份</strong>，並勿使用真實個案個資、機密文書。</div>
 <div class="layout">
 <aside class="panel">
@@ -47,11 +62,20 @@
 <div class="button-row"><button id="copy" type="button" class="secondary">複製提示詞</button><button id="open-provider" type="button" class="secondary">開啟對應 AI 網頁</button></div>
 <div class="field" style="margin-top:17px"><label for="answer">貼入該 AI 的完整回覆</label><textarea id="answer" rows="6" maxlength="50000" placeholder="本工具不會自動生成回覆，請貼上真實網頁版回覆。"></textarea></div>
 <button id="save-answer" type="button">儲存回覆，進入下一步</button></div>
-<div class="board" id="board"></div>
+<section class="round-reader" id="round-reader" aria-label="歷次雙 AI 意見檢視">
+<div class="row between"><h3>歷次討論／意見對照</h3><span class="count" id="reader-count">尚無回合</span></div>
+<div class="reader-controls">
+<div class="field"><label for="reader-round">檢視回合</label><select id="reader-round"></select></div>
+<div class="field"><label for="reader-phase">對照階段</label><select id="reader-phase"><option value="all">全部三階段</option><option value="independent">第一階段：獨立分析</option><option value="critique">第二階段：交叉審查</option><option value="proposal">第三階段：各自修正建議</option></select></div>
+<button type="button" class="secondary" id="reader-latest">回到最新回合</button>
+</div><div class="reader-caption" id="reader-caption">檢視歷史不會修改原文、送出內容或改變目前執行回合。</div>
+<div id="reader-review" class="round-review pending" aria-live="polite"></div>
+</section>
+<div class="board" id="board" aria-live="polite"></div>
 <div id="human" class="step hidden" style="margin-top:18px;background:#f4faf6;border-color:#b0d9c0"><h3>由你做最終審查</h3>
 <div class="field"><label for="decision">審查決定</label><select id="decision"><option value="accept_chatgpt">採納 ChatGPT 建議</option><option value="accept_gemini">採納 Gemini 建議</option><option value="partial">部分採納／自行綜整</option><option value="reject">不採納建議</option><option value="rework">退回重新討論</option></select></div>
 <div class="field"><label for="review-note">審查理由（退回時必填）</label><textarea id="review-note" rows="3" maxlength="10000" placeholder="退回理由會帶入下一回合給兩個 AI 的提示詞"></textarea></div><button id="save-review" type="button">提交人工決定</button></div>
-<h3 style="margin-top:24px">歷次審查</h3><div id="history" class="history">尚無紀錄</div>
+<h3 style="margin-top:24px">人工審查歷程</h3><div id="history" class="history">尚無紀錄</div>
 </div></section></div>
 </main><div id="toast" role="status" aria-live="polite" class="notice hidden"></div>
 <script>
@@ -64,6 +88,8 @@ const statuses={new:'未開始',running:'審查中',awaiting_human:'待人工核
 const STORAGE_KEY='multi-ai-v0.8-offline-data';
 const MAX_DOCX_BYTES=3*1024*1024, MAX_XML_BYTES=7*1024*1024, MAX_TEXT=50000,MAX_JSON_BYTES=8*1024*1024;
 let state={version:8,tasks:[],selectedId:null},storageOK=false,parsedFileName='';
+// View-only state: NOT included in v0.8 backups, never changes the active review round.
+const reader={taskId:null,ordinal:null,phase:'all'};
 const selected=()=>state.tasks.find(x=>x.id===state.selectedId)||null;
 const notice=(msg)=>{const node=$('toast');node.textContent=msg;node.classList.remove('hidden');clearTimeout(notice.timer);notice.timer=setTimeout(()=>node.classList.add('hidden'),4600);};
 const node=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
@@ -118,16 +144,66 @@ function mutate(update){update();const t=selected();if(t)t.updatedAt=iso();save(
 function filteredTasks(){const query=$('search').value.trim().toLocaleLowerCase();const filt=$('status-filter').value;return state.tasks.filter(t=>(filt==='all'||t.status===filt)&&(!query||`${t.title}\n${t.instruction}\n${t.category}`.toLocaleLowerCase().includes(query))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));}
 function renderList(){const root=$('task-list');root.replaceChildren();$('task-count').textContent=`（${state.tasks.length}）`;const xs=filteredTasks();if(!xs.length){root.append(node('div','sub','沒有符合條件的任務。'));return;}
  for(const t of xs){const button=node('button','task'+(t.id===state.selectedId?' active':''));button.type='button';button.append(node('strong','task-head',t.title),node('small','',`${t.category} · ${statuses[t.status]} · ${t.rounds.length} 回合`));button.addEventListener('click',()=>{state.selectedId=t.id;save();render();});root.append(button);}}
+function readingRound(t){
+ if(reader.taskId!==t.id){reader.taskId=t.id;reader.ordinal=last(t)?.ordinal??null;reader.phase='all';}
+ if(!t.rounds.some(r=>r.ordinal===reader.ordinal))reader.ordinal=last(t)?.ordinal??null;
+ return t.rounds.find(r=>r.ordinal===reader.ordinal)||null;
+}
+function showRoundHistory(t){
+ // The active prompt, reply editor, and source are never affected by changing these controls.
+ const r=readingRound(t),latest=last(t),isLatest=!!r&&r.ordinal===latest?.ordinal;
+ $('round-reader').classList.toggle('hidden',t.rounds.length===0);
+ const selector=$('reader-round');selector.replaceChildren();
+ for(const item of t.rounds){const option=node('option','',`第 ${item.ordinal} 回合 · ${item.outputs.length}/6`);option.value=String(item.ordinal);selector.append(option);}
+ if(r)selector.value=String(r.ordinal);
+ $('reader-phase').value=reader.phase;
+ $('reader-count').textContent=t.rounds.length?`共 ${t.rounds.length} 回合`:'尚無回合';
+ $('reader-latest').disabled=isLatest||!r;
+ $('reader-caption').textContent=r?`正在檢視第 ${r.ordinal} 回合（${isLatest?'最新回合':'歷史唯讀'}）。切換只影響下方顯示；不會更改原稿、六階段執行進度或人工核定。`:'任務尚未開始討論。';
+ const review=$('reader-review');review.replaceChildren();review.classList.toggle('pending',!r?.review);
+ if(r){
+  review.append(node('strong','',`第 ${r.ordinal} 回合｜${r.review?decisions[r.review.decision]:'尚待人工審查'}`));
+  if(r.review){
+   review.append(node('div','small',`核定時間：${r.review.createdAt||'未記錄'}`));
+   review.append(node('div','review-note',r.review.note?.trim()||'（沒有補充理由）'));
+  }else review.append(node('div','review-note','此回合沒有已提交的人工核定。'));
+  if(!isLatest)review.append(node('p','muted-small','目前正在檢視歷史回合。若要提交新的審查決定，請按「回到最新回合」。'));
+ }
+ $('human').classList.toggle('hidden',t.status!=='awaiting_human'||!isLatest);
+ const board=$('board');board.replaceChildren();
+ for(const provider of providers){
+  const lane=node('div','lane');lane.append(node('h3','',names[provider]));
+  for(const phase of phases){
+   if(reader.phase!=='all'&&reader.phase!==phase)continue;
+   const block=node('div','stage');block.append(node('div','title',names[phase]));
+   const record=r?.outputs.find(o=>o.provider===provider&&o.phase===phase);
+   const text=record?('〔網頁版手動貼入，來源未驗證〕\n'+record.body):'尚未提交';
+   block.append(node('div','body',text));lane.append(block);
+  }
+  board.append(lane);
+ }
+ const hist=$('history');hist.replaceChildren();
+ if(!t.rounds.length)hist.textContent='尚無紀錄';
+ for(const round of t.rounds){
+  const entry=node('div','history-entry'+(round.ordinal===r?.ordinal?' selected':''));
+  const box=node('div','history-copy');
+  box.append(node('strong','',`第 ${round.ordinal} 回合：${round.outputs.length}／6 份意見`));
+  box.append(node('div','history-note',round.review?`${decisions[round.review.decision]}｜${round.review.note||'（無補充）'}`:'尚未提交人工核定'));
+  const button=node('button','secondary small','檢視');button.type='button';
+  button.disabled=round.ordinal===r?.ordinal;
+  button.setAttribute('aria-label',`檢視第 ${round.ordinal} 回合`);
+  button.addEventListener('click',()=>{reader.ordinal=round.ordinal;showRoundHistory(t);});
+  entry.append(box,button);hist.append(entry);
+ }
+}
 function render(){renderList();const t=selected();$('empty-state').classList.toggle('hidden',!!t);$('project-content').classList.toggle('hidden',!t);if(!t){$('project-title').textContent='選取或建立任務';$('project-status').textContent='尚未選取';return;}
  $('project-title').textContent=t.title;$('project-status').textContent=statuses[t.status];$('task-meta').textContent=`分類：${t.category}　|　建立：${t.createdAt.slice(0,10)}　|　${t.rounds.length} 回合`;
  $('original').textContent=t.instruction;$('source').textContent=t.documentText||'（未提供文件文字）';$('begin').disabled=!['new','needs_rework'].includes(t.status);
- $('human').classList.toggle('hidden',t.status!=='awaiting_human');
  const s=currentStep(t),r=last(t),completed=r?.outputs.length||0;
  $('progress-label').textContent=r?`第 ${r.ordinal} 回合　${completed}／6 份 AI 意見`:'尚未開始本回合';$('phase-note').textContent=t.status==='awaiting_human'?'等待你的核定':t.status==='closed'?'人工已結案':s?names[s.phase]:'';
  $('progress-fill').style.width=(completed/6*100)+'%';$('manual-step').classList.toggle('hidden',!(t.status==='running'&&s));
  if(s){$('stage-count').textContent=`第 ${s.number}／6 步｜第 ${r.ordinal} 回合`;$('stage-heading').textContent=`${names[s.provider]} · ${names[s.phase]}`;$('prompt').value=promptFor(t,s);$('answer').value='';}
- const board=$('board');board.replaceChildren();for(const p of providers){const lane=node('div','lane');lane.append(node('h3','',names[p]));for(const phase of phases){const block=node('div','stage');block.append(node('div','title',names[phase]));const value=get(t,phase,p);block.append(node('div','body',value?'〔網頁版手動貼入，來源未驗證〕\n'+value:'尚未提交'));lane.append(block);}board.append(lane);}
- const hist=$('history');hist.replaceChildren();if(!t.rounds.length)hist.textContent='尚無紀錄';for(const rr of t.rounds){const label=rr.review?`${decisions[rr.review.decision]}｜${rr.review.note||'無補充'}`:'未完成人工審查';const line=node('div','','第 '+rr.ordinal+' 回合：'+rr.outputs.length+'／6 份意見；'+label);hist.append(line);}
+ showRoundHistory(t);
 }
 function fence(value){const text=String(value??'');const sizes=[...text.matchAll(/~+/g)].map(m=>m[0].length);const run='~'.repeat(Math.max(4,Math.max(0,...sizes)+1));return run+'text\n'+text+'\n'+run;}
 function markdown(t){const o=['# '+t.title.replace(/[\r\n]/g,' '),'','> Multi-AI 離線工作臺匯出｜AI 回覆需自行貼入，來源未驗證。','','- 分類：'+t.category,'- 建立時間：'+t.createdAt,'- 匯出時間：'+iso(),'- 來源 Word：'+(t.documentName||'未上傳原始檔'),'','## 原始交辦','',fence(t.instruction),'','## Word 擷取文字','',fence(t.documentText||'（未提供）'),''];for(const r of t.rounds){o.push('## 第 '+r.ordinal+' 回合','','- 開始時間：'+r.startedAt,'');for(const x of r.outputs){o.push('### '+names[x.provider]+'｜'+names[x.phase],'','- 來源：手動貼入，來源未驗證','- 時間：'+x.createdAt,'',fence(x.body),'');}if(r.review){o.push('### 人工審查','','- 決定：'+decisions[r.review.decision],'- 時間：'+r.review.createdAt,'',fence(r.review.note||'（無補充）'),'');}}
@@ -187,7 +263,10 @@ async function parseWord(file){if(!file.name.toLowerCase().endsWith('.docx'))thr
 $('create-form').addEventListener('submit',e=>{e.preventDefault();if(state.tasks.length>=100){notice('最多保存 100 筆任務，請先備份並整理');return;}const title=$('task-title').value.trim(),instruction=$('instruction').value.trim(),documentText=$('document-text').value;if(!title||!instruction){notice('請輸入標題與交辦指令');return;}const t={id:uuid(),title,instruction,documentText,documentName:parsedFileName,category:$('category').value,createdAt:iso(),updatedAt:iso(),status:'new',rounds:[]};state.tasks.push(t);state.selectedId=t.id;save();render();$('task-title').value='';$('instruction').value='';$('document-text').value='';$('word-file').value='';$('word-result').textContent='';parsedFileName='';notice('任務已建立並嘗試儲存至本機。');});
 $('word-file').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const control=$('create-submit');control.disabled=true;$('word-result').textContent='正在解析 Word 文字…';try{const text=await parseWord(file);$('document-text').value=text;parsedFileName=file.name;$('word-result').textContent=`已擷取 ${text.length.toLocaleString('zh-TW')} 個字元（含段落／表格），不儲存原檔。`;notice('Word 文字已擷取完成，請核對內容，再建立任務。');}catch(err){parsedFileName='';e.target.value='';$('word-result').textContent='擷取失敗：'+err.message;notice('Word 擷取失敗：'+err.message);}finally{control.disabled=false;}});
 $('search').addEventListener('input',renderList);$('status-filter').addEventListener('change',renderList);
-$('begin').addEventListener('click',()=>{const t=selected();if(!t||!['new','needs_rework'].includes(t.status))return;if(t.rounds.length>=30){notice('任務回合已達 30 次上限');return;}mutate(()=>{t.rounds.push({ordinal:t.rounds.length+1,startedAt:iso(),outputs:[],review:null});t.status='running';});notice('已開始回合，請複製這一階段的提示詞。');});
+$('reader-round').addEventListener('change',e=>{const t=selected();if(!t)return;const n=Number(e.target.value);if(t.rounds.some(r=>r.ordinal===n)){reader.ordinal=n;showRoundHistory(t);}});
+$('reader-phase').addEventListener('change',e=>{const t=selected();if(!t)return;if(['all',...phases].includes(e.target.value)){reader.phase=e.target.value;showRoundHistory(t);}});
+$('reader-latest').addEventListener('click',()=>{const t=selected();if(!t)return;reader.ordinal=last(t)?.ordinal??null;showRoundHistory(t);});
+$('begin').addEventListener('click',()=>{const t=selected();if(!t||!['new','needs_rework'].includes(t.status))return;if(t.rounds.length>=30){notice('任務回合已達 30 次上限');return;}mutate(()=>{t.rounds.push({ordinal:t.rounds.length+1,startedAt:iso(),outputs:[],review:null});t.status='running';reader.taskId=t.id;reader.ordinal=t.rounds.length;reader.phase='all';});notice('已開始回合，請複製這一階段的提示詞。');});
 $('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('prompt').value);notice('已複製提示詞');}catch{$('prompt').focus();$('prompt').select();notice('請手動按 Ctrl+C／Command+C 複製文字');}});
 $('open-provider').addEventListener('click',()=>{const s=currentStep(selected());if(!s)return;window.open(s.provider==='chatgpt'?'https://chatgpt.com/':'https://gemini.google.com/app','_blank','noopener,noreferrer');});
 $('save-answer').addEventListener('click',()=>{const t=selected(),s=currentStep(t),text=$('answer').value.trim();if(!s||t?.status!=='running'||!text){notice('請貼入對應 AI 的實際回覆');return;}mutate(()=>{last(t).outputs.push({...s,body:text,source:'manual_unverified',createdAt:iso()});if(!currentStep(t))t.status='awaiting_human';});notice(t.status==='awaiting_human'?'六份回覆已齊，等待你核定。':'已儲存這份回覆，進入下一步。');});

@@ -72,3 +72,9 @@ node tools/convert-offline-backup.mjs "你的離線備份.json"
 ```
 
 明確使用 `--output private-imports/計畫.json` 才輸出含完整私人文字的匯入計畫。新增 Node 與 SQLite 模擬匯入、重複匯入回滾測試。**真正將資料寫入 Cloudflare D1 的功能仍未開放，也沒有啟動遠端部署或模型 API。**
+
+## 離線工作臺 v0.9：歷史回合與意見對照
+
+[開啟 v0.9 單檔 HTML](offline/index.html)｜[保留已驗收的 v0.8 原檔](offline/v0.8.html)｜[v0.9 使用說明](offline/v0.9-操作說明.md)
+
+v0.9 增加歷次回合切換、同一階段 ChatGPT／Gemini 雙欄並排對照、人工採納／退回理由及日期檢視。切換歷史為唯讀，不改變最新回合審查、原文及未送出的回覆。**JSON 備份仍採 v0.8 格式，不需搬遷**。離線版已完成 Chromium 的回合切換及備份還原測試；Cloudflare 仍未部署。

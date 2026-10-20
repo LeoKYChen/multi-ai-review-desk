@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.8 離線版</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;color-scheme:light;--bg:#f2f5f8;--ink:#172b40;--muted:#607385;--accent:#2a648f;--border:#dce5ee;--success:#20704a;--warn:#9c501c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:1260px;margin:auto;padding:22px 20px 70px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px}.identity{display:flex;align-items:center;gap:12px}.symbol{background:#1e3b56;color:white;border-radius:11px;padding:12px 15px;font-size:19px}h1{font-size:24px;margin:0}h2{font-size:19px;margin:0 0 16px}h3{font-size:16px;margin:0 0 12px}p{line-height:1.65}.sub{color:var(--muted);font-size:13px;line-height:1.6}.pill{font-size:12px;background:#e6f2f6;color:#215a78;border-radius:15px;padding:7px 11px;white-space:nowrap}.pill.good{background:#e5f4e9;color:var(--success)}.pill.bad{background:#fff0e7;color:var(--warn)}.warning{margin-top:19px;border:1px solid #f0d5a8;background:#fff7e9;border-radius:12px;padding:13px 16px;font-size:13px;line-height:1.7}.layout{display:grid;grid-template-columns:365px minmax(0,1fr);gap:18px;margin-top:20px}.panel{background:white;border:1px solid var(--border);border-radius:15px;padding:22px;box-shadow:0 2px 12px #152e3b08}.field{display:grid;gap:7px;margin-bottom:15px}label{font-weight:700;font-size:13px}input,textarea,select{font:inherit;font-size:14px;border-radius:9px;border:1px solid #bfcfdb;padding:11px 12px;color:#1c2d3c;background:#fcfdff;width:100%;outline-color:var(--accent)}textarea{resize:vertical;line-height:1.6}button{font:inherit;font-size:13px;font-weight:700;border:1px solid #284963;background:#284963;color:#fff;padding:10px 14px;border-radius:9px;cursor:pointer}button:hover{filter:brightness(1.10)}button:disabled{opacity:.5;cursor:not-allowed}button.secondary{background:white;color:#284963;border-color:#bccddb}button.danger{background:white;color:#a14135;border-color:#e7bab7}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.small{font-size:12px}.hidden{display:none!important}.divider{border-top:1px solid var(--border);margin:18px 0}.board{display:grid;grid-template-columns:1fr 1fr;gap:12px}.lane{padding:15px;border-radius:12px;border:1px solid var(--border);min-width:0}.lane h3{padding-bottom:10px;border-bottom:1px solid var(--border)}.stage{background:#f7fafc;border-radius:9px;padding:12px;margin:9px 0}.stage .title{font-size:12px;font-weight:750;color:#2c5c7f;margin-bottom:7px}.stage .body{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;max-height:260px;overflow:auto}.view{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;background:#f7fafc;padding:14px;border-radius:10px;max-height:190px;overflow:auto}.step{border:1px solid #b8d8eb;background:#f6fbff;border-radius:13px;padding:17px;margin-bottom:16px}.history{font-size:13px;color:#475c6a;line-height:1.8}.notice{position:fixed;bottom:20px;right:20px;padding:12px 16px;background:#17384b;color:#fff;border-radius:10px;max-width:440px;box-shadow:0 4px 24px #0002;font-size:13px;z-index:30}.count{color:#2c6488;font-weight:750;font-size:12px}.button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.button-row button{flex:1}#project-pane{min-width:0}.tasks{display:grid;gap:8px;max-height:300px;overflow:auto;margin:12px 0}.task{display:block;text-align:left;width:100%;background:#fff;color:var(--ink);border:1px solid var(--border);padding:11px 12px;font-weight:400}.task.active{background:#edf7fc;border-color:var(--accent)}.task strong,.task small{display:block;word-break:break-word}.task small{font-size:11px;color:var(--muted);margin-top:5px}.task-head{font-size:14px}.progress{height:7px;background:#e3ebf1;border-radius:9px;overflow:hidden;margin:9px 0 16px}.progress div{background:#2c719e;height:100%;transition:width .2s}.bar{background:#fbfcfe;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:18px}.button-row.inline{justify-content:flex-end}.button-row.inline button{flex:unset}.list-title{margin-top:18px;font-size:14px}.muted-small{font-size:12px;color:var(--muted);line-height:1.6}.word-label{font-size:12px;color:var(--success)}.link{color:var(--accent);text-decoration:none}.link:hover{text-decoration:underline}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.board{grid-template-columns:1fr}.top{align-items:flex-start;flex-wrap:wrap}.panel{padding:17px}main{padding:16px 13px 60px}.button-row button{flex:auto}}
+</style>
+</head>
+<body>
+<main>
+<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">ChatGPT × Gemini · 離線工作流程 · 本機自動儲存</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.8</span></div></header>
+<div class="warning"><strong>離線模式：</strong>本檔案不連線 D1、不呼叫任何模型 API。開啟 ChatGPT/Gemini 按鈕才會前往其網站。任務會儲存在<strong>這個瀏覽器的本機儲存區（未加密）</strong>；若清除瀏覽器資料、使用無痕模式或改用其他裝置／檔案路徑，可能無法讀取。<strong>請定期匯出 JSON 備份</strong>，並勿使用真實個案個資、機密文書。</div>
+<div class="layout">
+<aside class="panel">
+<h2>建立任務</h2>
+<form id="create-form">
+<div class="field"><label for="task-title">任務標題</label><input id="task-title" maxlength="180" required placeholder="例如：文件審查"></div>
+<div class="field"><label for="category">分類</label><select id="category"><option value="一般">一般</option><option value="文件審查">文件審查</option><option value="研究分析">研究分析</option><option value="計畫討論">計畫討論</option><option value="其他">其他</option></select></div>
+<div class="field"><label for="instruction">交辦指令</label><textarea id="instruction" rows="4" maxlength="20000" required placeholder="說明希望兩個 AI 各自分析的事項"></textarea></div>
+<div class="field"><label for="word-file">上傳 Word（選填，僅 .docx）</label><input type="file" id="word-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"><div class="muted-small">僅在瀏覽器內解析，3 MB 以下，擷取前 5 萬字範圍內的純文字；不儲存 Word 原檔。</div><div id="word-result" class="word-label" aria-live="polite"></div></div>
+<div class="field"><label for="document-text">Word 擷取文字／自行貼入文字</label><textarea id="document-text" rows="5" maxlength="50000" placeholder="上傳 Word 後會自動填入，也可以直接貼文字"></textarea></div>
+<button id="create-submit" type="submit" style="width:100%">建立並儲存任務</button></form>
+<div class="divider"></div>
+<div class="row between"><h3 class="list-title">我的任務 <span id="task-count" class="muted-small"></span></h3><button id="export-json" type="button" class="secondary small">備份 JSON</button></div>
+<div class="field"><label for="search">搜尋任務</label><input id="search" placeholder="依標題、指令搜尋"></div>
+<div class="field"><label for="status-filter">狀態篩選</label><select id="status-filter"><option value="all">全部狀態</option><option value="new">未開始</option><option value="running">審查中</option><option value="awaiting_human">待核定</option><option value="needs_rework">退回重議</option><option value="closed">已結案</option></select></div>
+<div class="tasks" id="task-list" aria-live="polite"></div>
+<div class="field"><label for="import-json">還原 JSON 備份</label><input id="import-json" type="file" accept=".json,application/json"><div class="muted-small">還原前會確認是否要覆蓋目前任務。備份包含所有文字及審查紀錄，請妥善保護。</div></div>
+</aside>
+<section class="panel" id="project-pane">
+<div class="row between"><h2 id="project-title">選取或建立任務</h2><span class="pill" id="project-status">尚未選取</span></div>
+<div id="empty-state" class="sub">建立任務後，即可進行六階段網頁版輔助審查。</div>
+<div id="project-content" class="hidden">
+<div class="row between"><div class="sub" id="task-meta"></div><div class="row"><button id="export" type="button" class="secondary small">匯出紀錄（MD）</button><button id="delete" type="button" class="danger small">刪除任務</button></div></div>
+<h3 style="margin-top:18px">原始交辦（唯讀）</h3><div id="original" class="view"></div>
+<h3 style="margin-top:18px">文件擷取文字（唯讀）</h3><div id="source" class="view"></div>
+<div class="divider"></div>
+<div class="row between"><h3>雙 AI 審查</h3><button id="begin" type="button">開始本回合</button></div>
+<p class="sub">完整指令需貼到兩個 AI 網頁並手動貼回回答。貼回的回答均註明「來源未驗證」。</p>
+<div class="bar"><div class="row between"><span class="count" id="progress-label">本回合尚未開始</span><span class="muted-small" id="phase-note"></span></div><div class="progress"><div id="progress-fill" style="width:0%"></div></div></div>
+<div id="manual-step" class="step hidden"><div class="count" id="stage-count"></div><h3 id="stage-heading"></h3>
+<div class="field"><label for="prompt">本階段完整提示詞</label><textarea id="prompt" rows="7" readonly></textarea></div>
+<div class="button-row"><button id="copy" type="button" class="secondary">複製提示詞</button><button id="open-provider" type="button" class="secondary">開啟對應 AI 網頁</button></div>
+<div class="field" style="margin-top:17px"><label for="answer">貼入該 AI 的完整回覆</label><textarea id="answer" rows="6" maxlength="50000" placeholder="本工具不會自動生成回覆，請貼上真實網頁版回覆。"></textarea></div>
+<button id="save-answer" type="button">儲存回覆，進入下一步</button></div>
+<div class="board" id="board"></div>
+<div id="human" class="step hidden" style="margin-top:18px;background:#f4faf6;border-color:#b0d9c0"><h3>由你做最終審查</h3>
+<div class="field"><label for="decision">審查決定</label><select id="decision"><option value="accept_chatgpt">採納 ChatGPT 建議</option><option value="accept_gemini">採納 Gemini 建議</option><option value="partial">部分採納／自行綜整</option><option value="reject">不採納建議</option><option value="rework">退回重新討論</option></select></div>
+<div class="field"><label for="review-note">審查理由（退回時必填）</label><textarea id="review-note" rows="3" maxlength="10000" placeholder="退回理由會帶入下一回合給兩個 AI 的提示詞"></textarea></div><button id="save-review" type="button">提交人工決定</button></div>
+<h3 style="margin-top:24px">歷次審查</h3><div id="history" class="history">尚無紀錄</div>
+</div></section></div>
+</main><div id="toast" role="status" aria-live="polite" class="notice hidden"></div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const phases=['independent','critique','proposal'],providers=['chatgpt','gemini'];
+const names={independent:'第一階段：獨立分析',critique:'第二階段：交叉審查',proposal:'第三階段：各自最終修正建議',chatgpt:'ChatGPT',gemini:'Gemini'};
+const decisions={accept_chatgpt:'採納 ChatGPT',accept_gemini:'採納 Gemini',partial:'部分採納',reject:'不採納',rework:'退回重新討論'};
+const statuses={new:'未開始',running:'審查中',awaiting_human:'待人工核定',needs_rework:'退回重議',closed:'已由人類結案'};
+const STORAGE_KEY='multi-ai-v0.8-offline-data';
+const MAX_DOCX_BYTES=3*1024*1024, MAX_XML_BYTES=7*1024*1024, MAX_TEXT=50000,MAX_JSON_BYTES=8*1024*1024;
+let state={version:8,tasks:[],selectedId:null},storageOK=false,parsedFileName='';
+const selected=()=>state.tasks.find(x=>x.id===state.selectedId)||null;
+const notice=(msg)=>{const node=$('toast');node.textContent=msg;node.classList.remove('hidden');clearTimeout(notice.timer);notice.timer=setTimeout(()=>node.classList.add('hidden'),4600);};
+const node=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
+const iso=()=>new Date().toISOString();
+const uuid=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const last=t=>t?.rounds.at(-1)||null;
+const currentStep=t=>{const r=last(t);if(!r||r.review)return null;for(const phase of phases)for(const provider of providers)if(!r.outputs.some(x=>x.phase===phase&&x.provider===provider))return {phase,provider,number:r.outputs.length+1};return null;};
+const get=(t,p,who)=>last(t)?.outputs.find(x=>x.phase===p&&x.provider===who)?.body||'';
+const noteBefore=t=>{if(t.rounds.length<2)return '';const r=t.rounds.at(-2);return r.review?.decision==='rework'?r.review.note||'':'';};
+function promptFor(t,s){
+ let text=`任務：${t.title}\n交辦指令：${t.instruction}\n\n文件擷取文字：\n${t.documentText||'（未附文件）'}`;
+ const note=noteBefore(t);if(note)text+=`\n\n【上一回合人工退回意見】\n${note}\n請依此重新分析，但兩位 AI 在本回合仍應各自提出初稿。`;
+ if(s.phase==='independent')return text+'\n\n【第一階段：獨立分析】請獨立提出初步意見，尚不可參考另一個 AI 在本回合的答案。提出理由與待確認事項。';
+ text+='\n\n'+providers.map(p=>`【${names[p]} 本回合獨立初稿】\n${get(t,'independent',p)}`).join('\n\n');
+ if(s.phase==='critique')return text+`\n\n【第二階段：交叉審查】你是 ${names[s.provider]}，請評論對方初稿的優點、疑點及可行修正，並檢查自己初稿的缺漏。`;
+ text+='\n\n'+providers.map(p=>`【${names[p]} 本回合交叉意見】\n${get(t,'critique',p)}`).join('\n\n');
+ return text+`\n\n【第三階段：個別最終修正建議】你是 ${names[s.provider]}，請根據討論提供自己的最終修正建議、與初稿的差異，以及仍待人工核定的爭點。不要修改原文，也不要替人類結案。`;
+}
+function showStorage(ok,msg){storageOK=ok;const badge=$('storage-state');badge.className='pill '+(ok?'good':'bad');badge.textContent=msg||(ok?'已自動儲存於本機':'本機儲存不可用');}
+function save(){
+ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));showStorage(true,'已自動儲存於本機');return true;}
+ catch(e){showStorage(false,'儲存失敗，請立即備份 JSON');notice('本機儲存失敗（可能空間不足／停用）。請立即匯出 JSON 備份！');return false;}
+}
+function cleanImported(raw){
+ if(!raw||raw.version!==8||!Array.isArray(raw.tasks)||raw.tasks.length>100||raw.tasks.length<0)throw Error('不是可用的 v0.8 JSON 備份（最多 100 筆任務）');
+ const allowed=['new','running','awaiting_human','needs_rework','closed'],out=[],ids=new Set();
+ for(const t of raw.tasks){
+  if(!t||typeof t!=='object'||typeof t.id!=='string'||t.id.length>100||ids.has(t.id)||typeof t.title!=='string'||t.title.length>180||typeof t.instruction!=='string'||t.instruction.length>20000||typeof t.documentText!=='string'||t.documentText.length>MAX_TEXT||!allowed.includes(t.status)||!Array.isArray(t.rounds)||t.rounds.length>30)throw Error('備份中的任務結構無效或超過限制');
+  ids.add(t.id);const rounds=[];
+  for(const [i,r] of t.rounds.entries()){
+   if(r?.ordinal!==i+1||!Array.isArray(r.outputs)||r.outputs.length>6)throw Error('備份回合結構不正確');
+   const outs=[],keys=new Set();
+   for(const x of r.outputs){
+    const key=x?.provider+':'+x?.phase;
+    if(!providers.includes(x?.provider)||!phases.includes(x?.phase)||keys.has(key)||typeof x.body!=='string'||x.body.length>MAX_TEXT)throw Error('備份包含無效 AI 意見');
+    keys.add(key);outs.push({phase:x.phase,provider:x.provider,body:x.body,source:'manual_unverified',createdAt:String(x.createdAt||'').slice(0,40)});
+   }
+   let review=null;
+   if(r.review!=null){if(!Object.keys(decisions).includes(r.review.decision)||typeof r.review.note!=='string'||r.review.note.length>10000)throw Error('備份人工審查欄位無效');review={decision:r.review.decision,note:r.review.note,createdAt:String(r.review.createdAt||'').slice(0,40)};}
+   rounds.push({ordinal:i+1,startedAt:String(r.startedAt||'').slice(0,40),outputs:outs,review});
+  }
+  out.push({id:t.id,title:t.title,instruction:t.instruction,documentText:t.documentText,documentName:typeof t.documentName==='string'?t.documentName.slice(0,180):'',category:typeof t.category==='string'?t.category.slice(0,30):'一般',createdAt:String(t.createdAt||'').slice(0,40),updatedAt:String(t.updatedAt||'').slice(0,40),status:t.status,rounds});
+ }
+ return {version:8,tasks:out,selectedId:ids.has(raw.selectedId)?raw.selectedId:(out[0]?.id||null)};
+}
+function restore(){
+ try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)state=cleanImported(JSON.parse(raw));localStorage.setItem(STORAGE_KEY,JSON.stringify(state));showStorage(true,raw?'已恢復本機任務':'已啟用本機自動儲存');}
+ catch(e){showStorage(false,'儲存不可用／無法讀取');if(e instanceof DOMException&&e.name==='SecurityError')notice('瀏覽器封鎖本機儲存；可改用 JSON 備份。');else if(localStorageSafe())notice('舊備份讀取失敗，請使用 JSON 備份還原。');}
+}
+function localStorageSafe(){try{return typeof localStorage!=='undefined';}catch{return false;}}
+function mutate(update){update();const t=selected();if(t)t.updatedAt=iso();save();render();}
+function filteredTasks(){const query=$('search').value.trim().toLocaleLowerCase();const filt=$('status-filter').value;return state.tasks.filter(t=>(filt==='all'||t.status===filt)&&(!query||`${t.title}\n${t.instruction}\n${t.category}`.toLocaleLowerCase().includes(query))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));}
+function renderList(){const root=$('task-list');root.replaceChildren();$('task-count').textContent=`（${state.tasks.length}）`;const xs=filteredTasks();if(!xs.length){root.append(node('div','sub','沒有符合條件的任務。'));return;}
+ for(const t of xs){const button=node('button','task'+(t.id===state.selectedId?' active':''));button.type='button';button.append(node('strong','task-head',t.title),node('small','',`${t.category} · ${statuses[t.status]} · ${t.rounds.length} 回合`));button.addEventListener('click',()=>{state.selectedId=t.id;save();render();});root.append(button);}}
+function render(){renderList();const t=selected();$('empty-state').classList.toggle('hidden',!!t);$('project-content').classList.toggle('hidden',!t);if(!t){$('project-title').textContent='選取或建立任務';$('project-status').textContent='尚未選取';return;}
+ $('project-title').textContent=t.title;$('project-status').textContent=statuses[t.status];$('task-meta').textContent=`分類：${t.category}　|　建立：${t.createdAt.slice(0,10)}　|　${t.rounds.length} 回合`;
+ $('original').textContent=t.instruction;$('source').textContent=t.documentText||'（未提供文件文字）';$('begin').disabled=!['new','needs_rework'].includes(t.status);
+ $('human').classList.toggle('hidden',t.status!=='awaiting_human');
+ const s=currentStep(t),r=last(t),completed=r?.outputs.length||0;
+ $('progress-label').textContent=r?`第 ${r.ordinal} 回合　${completed}／6 份 AI 意見`:'尚未開始本回合';$('phase-note').textContent=t.status==='awaiting_human'?'等待你的核定':t.status==='closed'?'人工已結案':s?names[s.phase]:'';
+ $('progress-fill').style.width=(completed/6*100)+'%';$('manual-step').classList.toggle('hidden',!(t.status==='running'&&s));
+ if(s){$('stage-count').textContent=`第 ${s.number}／6 步｜第 ${r.ordinal} 回合`;$('stage-heading').textContent=`${names[s.provider]} · ${names[s.phase]}`;$('prompt').value=promptFor(t,s);$('answer').value='';}
+ const board=$('board');board.replaceChildren();for(const p of providers){const lane=node('div','lane');lane.append(node('h3','',names[p]));for(const phase of phases){const block=node('div','stage');block.append(node('div','title',names[phase]));const value=get(t,phase,p);block.append(node('div','body',value?'〔網頁版手動貼入，來源未驗證〕\n'+value:'尚未提交'));lane.append(block);}board.append(lane);}
+ const hist=$('history');hist.replaceChildren();if(!t.rounds.length)hist.textContent='尚無紀錄';for(const rr of t.rounds){const label=rr.review?`${decisions[rr.review.decision]}｜${rr.review.note||'無補充'}`:'未完成人工審查';const line=node('div','','第 '+rr.ordinal+' 回合：'+rr.outputs.length+'／6 份意見；'+label);hist.append(line);}
+}
+function fence(value){const text=String(value??'');const sizes=[...text.matchAll(/~+/g)].map(m=>m[0].length);const run='~'.repeat(Math.max(4,Math.max(0,...sizes)+1));return run+'text\n'+text+'\n'+run;}
+function markdown(t){const o=['# '+t.title.replace(/[\r\n]/g,' '),'','> Multi-AI 離線工作臺匯出｜AI 回覆需自行貼入，來源未驗證。','','- 分類：'+t.category,'- 建立時間：'+t.createdAt,'- 匯出時間：'+iso(),'- 來源 Word：'+(t.documentName||'未上傳原始檔'),'','## 原始交辦','',fence(t.instruction),'','## Word 擷取文字','',fence(t.documentText||'（未提供）'),''];for(const r of t.rounds){o.push('## 第 '+r.ordinal+' 回合','','- 開始時間：'+r.startedAt,'');for(const x of r.outputs){o.push('### '+names[x.provider]+'｜'+names[x.phase],'','- 來源：手動貼入，來源未驗證','- 時間：'+x.createdAt,'',fence(x.body),'');}if(r.review){o.push('### 人工審查','','- 決定：'+decisions[r.review.decision],'- 時間：'+r.review.createdAt,'',fence(r.review.note||'（無補充）'),'');}}
+ return o.join('\n');}
+function download(content,name,type){const url=URL.createObjectURL(new Blob([content],{type}));const a=node('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+
+// DOCX ZIP central directory parsing, without external scripts or network.
+function int16(v,n){if(n<0||n+2>v.byteLength)throw Error('Word ZIP 結構損壞');return v.getUint16(n,true);}
+function int32(v,n){if(n<0||n+4>v.byteLength)throw Error('Word ZIP 結構損壞');return v.getUint32(n,true);}
+async function unzipWordXml(bytes){
+ if(bytes.length>MAX_DOCX_BYTES)throw Error('Word 檔案不能超過 3 MB');
+ const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let eocd=-1;
+ for(let off=bytes.length-22;off>=Math.max(0,bytes.length-22-65535);off--){if(int32(view,off)===0x06054b50){eocd=off;break;}}
+ if(eocd<0)throw Error('找不到 Word ZIP 目錄；請確認檔案為有效 .docx');
+ const count=int16(view,eocd+10),cdOff=int32(view,eocd+16);if(count>1000)throw Error('Word 內部檔案數過多');
+ let cursor=cdOff,found=null;const decoder=new TextDecoder('utf-8',{fatal:false});
+ for(let i=0;i<count;i++){
+  if(int32(view,cursor)!==0x02014b50)throw Error('Word ZIP 目錄格式錯誤');
+  const method=int16(view,cursor+10),flags=int16(view,cursor+8),size=int32(view,cursor+20),usize=int32(view,cursor+24),nlen=int16(view,cursor+28),extra=int16(view,cursor+30),comment=int16(view,cursor+32),local=int32(view,cursor+42);
+  if(cursor+46+nlen+extra+comment>bytes.length)throw Error('Word ZIP 目錄長度錯誤');
+  const filename=decoder.decode(bytes.slice(cursor+46,cursor+46+nlen));
+  if(filename==='word/document.xml'){found={method,flags,size,usize,local};break;}
+  cursor+=46+nlen+extra+comment;
+ }
+ if(!found)throw Error('文件缺少 word/document.xml，可能不是有效 Word 文件');
+ if(found.flags&1)throw Error('不支援加密的 Word 文件');
+ if(found.usize>MAX_XML_BYTES)throw Error('Word 文件文字內容過大，請拆分文件');
+ const o=found.local;if(int32(view,o)!==0x04034b50)throw Error('Word ZIP 本地標頭無效');
+ const start=o+30+int16(view,o+26)+int16(view,o+28),end=start+found.size;
+ if(start<0||end>bytes.length)throw Error('Word ZIP 內容不完整');
+ const compressed=bytes.slice(start,end);let inflated;
+ if(found.method===0)inflated=compressed;
+ else if(found.method===8){
+  if(typeof DecompressionStream!=='function')throw Error('目前瀏覽器不支援 Word 解壓縮，請更新 Chrome／Edge');
+  try{const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));inflated=new Uint8Array(await new Response(stream).arrayBuffer());}
+  catch{throw Error('無法解壓 Word，請確認檔案完整並更新瀏覽器');}
+ }else throw Error('不支援此 Word 壓縮格式');
+ if(inflated.length>MAX_XML_BYTES||inflated.length!==found.usize)throw Error('Word 內容大小異常');
+ return new TextDecoder('utf-8').decode(inflated);
+}
+const WORD_NS='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const isWord=(element,name)=>element?.nodeType===1&&element.localName===name&&element.namespaceURI===WORD_NS;
+function paragraphText(element){let out='';function walk(n){for(const child of n.childNodes){if(child.nodeType!==1)continue;if(isWord(child,'t'))out+=child.textContent;else if(isWord(child,'tab'))out+='\t';else if(isWord(child,'br')||isWord(child,'cr'))out+='\n';else if(isWord(child,'instrText')||isWord(child,'delText'))continue;else walk(child);}}walk(element);return out;}
+function wordText(xml){
+ const dom=new DOMParser().parseFromString(xml,'application/xml');if(dom.querySelector('parsererror'))throw Error('Word XML 格式有誤');
+ const body=dom.getElementsByTagNameNS(WORD_NS,'body')[0];if(!body)throw Error('找不到 Word 主文');const output=[];
+ function traverse(element){for(const child of element.children){
+  if(isWord(child,'p'))output.push(paragraphText(child));
+  else if(isWord(child,'tbl')){
+   for(const row of child.children){if(!isWord(row,'tr'))continue;const cells=[];for(const tc of row.children){if(!isWord(tc,'tc'))continue;const ps=[...tc.getElementsByTagNameNS(WORD_NS,'p')].map(p=>paragraphText(p));cells.push(ps.join(' / '));}output.push(cells.join('\t'));}
+  }else traverse(child);
+ }}
+ traverse(body);const text=output.join('\n').trim();if(!text)throw Error('Word 主文未擷取到文字（掃描圖片或特殊格式不支援）');if(text.length>MAX_TEXT)throw Error('Word 主文超過 50,000 字，請拆分文件');return text;
+}
+async function parseWord(file){if(!file.name.toLowerCase().endsWith('.docx'))throw Error('僅支援 .docx Word 檔案');if(file.size===0||file.size>MAX_DOCX_BYTES)throw Error('Word 檔案須介於 1 位元組與 3 MB 之間');const xml=await unzipWordXml(new Uint8Array(await file.arrayBuffer()));return wordText(xml);}
+
+$('create-form').addEventListener('submit',e=>{e.preventDefault();if(state.tasks.length>=100){notice('最多保存 100 筆任務，請先備份並整理');return;}const title=$('task-title').value.trim(),instruction=$('instruction').value.trim(),documentText=$('document-text').value;if(!title||!instruction){notice('請輸入標題與交辦指令');return;}const t={id:uuid(),title,instruction,documentText,documentName:parsedFileName,category:$('category').value,createdAt:iso(),updatedAt:iso(),status:'new',rounds:[]};state.tasks.push(t);state.selectedId=t.id;save();render();$('task-title').value='';$('instruction').value='';$('document-text').value='';$('word-file').value='';$('word-result').textContent='';parsedFileName='';notice('任務已建立並嘗試儲存至本機。');});
+$('word-file').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const control=$('create-submit');control.disabled=true;$('word-result').textContent='正在解析 Word 文字…';try{const text=await parseWord(file);$('document-text').value=text;parsedFileName=file.name;$('word-result').textContent=`已擷取 ${text.length.toLocaleString('zh-TW')} 個字元（含段落／表格），不儲存原檔。`;notice('Word 文字已擷取完成，請核對內容，再建立任務。');}catch(err){parsedFileName='';e.target.value='';$('word-result').textContent='擷取失敗：'+err.message;notice('Word 擷取失敗：'+err.message);}finally{control.disabled=false;}});
+$('search').addEventListener('input',renderList);$('status-filter').addEventListener('change',renderList);
+$('begin').addEventListener('click',()=>{const t=selected();if(!t||!['new','needs_rework'].includes(t.status))return;if(t.rounds.length>=30){notice('任務回合已達 30 次上限');return;}mutate(()=>{t.rounds.push({ordinal:t.rounds.length+1,startedAt:iso(),outputs:[],review:null});t.status='running';});notice('已開始回合，請複製這一階段的提示詞。');});
+$('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('prompt').value);notice('已複製提示詞');}catch{$('prompt').focus();$('prompt').select();notice('請手動按 Ctrl+C／Command+C 複製文字');}});
+$('open-provider').addEventListener('click',()=>{const s=currentStep(selected());if(!s)return;window.open(s.provider==='chatgpt'?'https://chatgpt.com/':'https://gemini.google.com/app','_blank','noopener,noreferrer');});
+$('save-answer').addEventListener('click',()=>{const t=selected(),s=currentStep(t),text=$('answer').value.trim();if(!s||t?.status!=='running'||!text){notice('請貼入對應 AI 的實際回覆');return;}mutate(()=>{last(t).outputs.push({...s,body:text,source:'manual_unverified',createdAt:iso()});if(!currentStep(t))t.status='awaiting_human';});notice(t.status==='awaiting_human'?'六份回覆已齊，等待你核定。':'已儲存這份回覆，進入下一步。');});
+$('save-review').addEventListener('click',()=>{const t=selected();if(t?.status!=='awaiting_human')return;const decision=$('decision').value,note=$('review-note').value.trim();if(decision==='rework'&&!note){notice('退回重議必須填寫具體理由。');return;}mutate(()=>{last(t).review={decision,note,createdAt:iso()};t.status=decision==='rework'?'needs_rework':'closed';});$('review-note').value='';notice(decision==='rework'?'已退回；下一回合會帶入你提出的理由。':'已儲存你的人工決定。');});
+$('export').addEventListener('click',()=>{const t=selected();if(!t)return;download(markdown(t),'multi-ai-review-'+t.id+'.md','text/markdown;charset=utf-8');notice('已下載 Markdown，請妥善保管。');});
+$('export-json').addEventListener('click',()=>{const data={...state,exportedAt:iso(),format:'multi-ai-offline-v0.8'};download(JSON.stringify(data,null,2),'multi-ai-backup-'+new Date().toISOString().slice(0,10)+'.json','application/json;charset=utf-8');notice('已下載全部任務備份（JSON）；檔案未加密。');});
+$('import-json').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;e.target.value='';try{if(file.size>MAX_JSON_BYTES)throw Error('JSON 備份不可超過 8MB');const incoming=cleanImported(JSON.parse(await file.text()));if(!confirm(`確定以備份中的 ${incoming.tasks.length} 筆任務，覆蓋目前 ${state.tasks.length} 筆任務嗎？請先備份舊資料。`))return;state=incoming;save();render();notice('JSON 已還原並嘗試保存到本機。');}catch(err){notice('無法還原 JSON：'+err.message);}});
+$('delete').addEventListener('click',()=>{const t=selected();if(!t)return;if(!confirm(`確定刪除「${t.title}」及全部回合嗎？此操作不可復原，建議先備份。`))return;state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=state.tasks[0]?.id||null;save();render();notice('已刪除任務');});
+restore();render();
+})();
+
+</script>
+</body></html>
