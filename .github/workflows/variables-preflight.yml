@@ -1,7 +1,5 @@
 name: Cloudflare variables validation (no deployment)
 on:
-  push:
-    branches: [feat/d1-docx-review-v020]
   workflow_dispatch:
 permissions:
   contents: read
