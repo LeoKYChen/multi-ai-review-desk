@@ -16,6 +16,6 @@ test('default Worker never creates a public workers.dev host',()=>{
 });
 test('staging generator explicitly disables background tasks and model API',()=>{
  const script=txt('../scripts/prepare-staging.mjs');
- assert.match(script,/MODEL_API_ENABLED = \\"false\\"/);
- assert.match(script,/BACKGROUND_JOBS_ENABLED = \\"false\\"/);
+ assert.ok(script.includes('MODEL_API_ENABLED = "false"'));
+ assert.ok(script.includes('BACKGROUND_JOBS_ENABLED = "false"'));
 });
