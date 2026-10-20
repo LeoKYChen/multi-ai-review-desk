@@ -1,0 +1,34 @@
+name: Cloudflare variables validation (no deployment)
+on:
+  push:
+    branches: [feat/d1-docx-review-v020]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      CLOUD_ACCOUNT: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      DATABASE: ${{ vars.CF_D1_DATABASE_ID }}
+      DEPLOY_SWITCH: ${{ vars.ENABLE_STAGING_DEPLOY }}
+    steps:
+      - name: Validate public identifiers only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          checks = (
+              ('CLOUDFLARE_ACCOUNT_ID', os.environ.get('CLOUD_ACCOUNT', ''), r'[A-Fa-f0-9]{32}'),
+              ('CF_D1_DATABASE_ID', os.environ.get('DATABASE', ''), r'[A-Fa-f0-9]{8}(?:-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}'),
+              ('ENABLE_STAGING_DEPLOY', os.environ.get('DEPLOY_SWITCH', ''), r'(?:true|false)'),
+          )
+          failed = False
+          for key, value, pattern in checks:
+              valid = bool(re.fullmatch(pattern, value))
+              print(('PASS' if valid else 'FAIL') + ': ' + key + ' format')
+              failed |= not valid
+          print('This preflight does not read credential values, deploy Workers, or modify D1.')
+          sys.exit(1 if failed else 0)
+          PY
