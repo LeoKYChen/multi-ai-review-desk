@@ -18,3 +18,10 @@ jobs:
         run: node --check cloudflare/public/app.js
       - name: D1 schema and source immutability
         run: python3 cloudflare/test/check_schema.py
+      - name: Cloudflare Workers bundle dry-run (no deployment)
+        run: |
+          cd cloudflare
+          npm install --no-fund --no-audit
+          cp wrangler.toml.example wrangler.toml
+          sed -i 's/REPLACE_WITH_YOUR_D1_DATABASE_ID/00000000-0000-4000-8000-000000000000/' wrangler.toml
+          npx wrangler deploy --dry-run --outdir=.wrangler-build
