@@ -1,0 +1,10 @@
+node_modules/
+data/
+.env
+*.tmp
+providers.local.json
+.wrangler/
+cloudflare/.wrangler/
+cloudflare/node_modules/
+**/.env.*
+cloudflare/wrangler.toml
