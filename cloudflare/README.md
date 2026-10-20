@@ -80,3 +80,12 @@ python3 test/check_schema.py
 - 網頁版顯示六步驟進度。新功能均可在 GitHub Actions 進行單元測試，不需要部署 Cloudflare 或輸入 API Key。
 
 **更正舊版說明：** staging 部署工作已由自動 push 改為需要人工 `workflow_dispatch`、指定確認字串及 `ENABLE_STAGING_DEPLOY=true` 三項條件，不能單靠 push 自動部署。
+
+## 離線 v0.8 功能移植（雲端原型，尚未部署）
+
+- 新增 `migrations/0005_task_category.sql`，對既有 D1 任務設定預設分類「一般」，並建立分類索引。**尚未對遠端 D1 執行 migration**。
+- `POST /api/tasks` 現在可提交 `category`，最多 30 字元，原始交辦、Word 文字依舊不可被覆寫。
+- `GET /api/tasks?q=...&status=...&category=...` 支援參數化搜尋與狀態、分類篩選，最多回傳 100 筆。搜尋文字絕不直接拼接 SQL。
+- 登入後介面新增任務分類、搜尋、狀態和分類篩選，以及每回合 0 至 6 份模型意見的進度顯示。
+- **離線 JSON 備份尚未支援直接匯入 D1**；這是不同的資料格式。離線單檔仍在 [offline/index.html](../offline/index.html)，不接雲端 D1。
+- 仍需實際 Cloudflare Workers/D1 授權、環境部署及端對端操作驗收；目前不適合存入私人敏感資料。

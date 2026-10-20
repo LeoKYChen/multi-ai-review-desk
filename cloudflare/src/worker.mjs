@@ -6,6 +6,7 @@ import { beginManual, getManualNext, submitManual } from './manual.mjs';
 import { guardedLogin, apiEnabled, reserveModelCall, markModelCall, modelCallCaps } from './guardrails.mjs';
 import { renderTaskMarkdown } from './export.mjs';
 import { getPreviousReworkNote } from './review-context.mjs';
+import {parseTaskFilters,buildTaskListQuery} from './task-query.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -29,6 +30,7 @@ async function createTask(req,env){
  assert(Number(req.headers.get('Content-Length')||0)<MAX_DOCX_BYTES+100000,413,'附件過大');
  const form=await req.formData();const title=form.get('title'),instruction=form.get('instruction'),file=form.get('document');
  const mode=form.get('mode')||'manual';assert(mode==='manual'||mode==='api',422,'工作模式不正確');
+ const category=form.get('category')||'一般';assert(typeof category==='string'&&category.trim().length>0&&category.length<=30,422,'分類不得超過30字元');
  assert(typeof title==='string'&&title.trim()&&title.length<=180,422,'任務標題無效');
  assert(typeof instruction==='string'&&instruction.trim()&&instruction.length<=20000,422,'交辦指令無效');
  let documentText='',documentName=null,warnings=[];
@@ -40,9 +42,9 @@ async function createTask(req,env){
   documentText=extracted.text;documentName=file.name;warnings=extracted.warnings;
  }
  const id=uuid(),now=iso();
- await env.DB.prepare('INSERT INTO tasks (id,title,instruction,document_text,document_name,status,created_at,updated_at,mode) VALUES (?,?,?,?,?,?,?,?,?)')
-  .bind(id,title.trim(),instruction.trim(),documentText,documentName,'new',now,now,mode).run();
- return respond({id,title:title.trim(),status:'new',mode,document_name:documentName,extracted_characters:documentText.length,warnings},201);
+ await env.DB.prepare('INSERT INTO tasks (id,title,instruction,document_text,document_name,status,created_at,updated_at,mode,category) VALUES (?,?,?,?,?,?,?,?,?,?)')
+  .bind(id,title.trim(),instruction.trim(),documentText,documentName,'new',now,now,mode,category.trim()).run();
+ return respond({id,title:title.trim(),status:'new',mode,category:category.trim(),document_name:documentName,extracted_characters:documentText.length,warnings},201);
 }
 async function readFullTask(env,id){
  const t=await task(env,id);
@@ -149,7 +151,10 @@ export default {async fetch(req,env){
   if(pathname==='/api/settings'&&req.method==='GET')return respond({models_configured:ready(env)&&apiEnabled(env),manual_mode_available:true,api_enabled:apiEnabled(env),api_call_caps:modelCallCaps(env),provider_names:['chatgpt','gemini'],uses_paid_api_credentials:true});
   if(pathname==='/api/tasks'&&req.method==='POST')return await createTask(req,env);
   if(pathname==='/api/tasks'&&req.method==='GET'){
-   const rows=(await env.DB.prepare('SELECT id,title,status,mode,document_name,created_at FROM tasks ORDER BY created_at DESC LIMIT 100').all()).results;return respond({tasks:rows});
+   const filter=parseTaskFilters(new URL(req.url));
+   const {sql,params}=buildTaskListQuery(filter);
+   const rows=(await env.DB.prepare(sql).bind(...params).all()).results;
+   return respond({tasks:rows,limit:100,filters:filter});
   }
   const exportRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/export\.md$/);
   if(exportRoute&&req.method==='GET'){

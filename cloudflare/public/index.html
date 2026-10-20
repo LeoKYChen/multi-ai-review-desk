@@ -35,6 +35,8 @@
                 <option value="api">使用 API 全自動模式（需另行設定憑證與額度）</option>
               </select>
               <p class="hint">網頁版不需要 API，但每個階段仍須自行將提示詞貼到對應網站，並把回覆貼回工作臺；不是一鍵自動控制兩個網頁帳號。</p>
+              <label for="category">任務分類</label>
+              <select id="category" name="category"><option value="一般">一般</option><option value="文件審查">文件審查</option><option value="研究分析">研究分析</option><option value="計畫討論">計畫討論</option><option value="其他">其他</option></select>
               <label for="title">任務標題</label><input id="title" name="title" maxlength="180" required placeholder="例如：請審查這份文字"/>
               <label for="instruction">交辦指令</label><textarea id="instruction" name="instruction" maxlength="20000" required rows="5" placeholder="說明希望 ChatGPT、Gemini 分析的問題及審查方向"></textarea>
               <label for="document">Word 附件（選填）</label><input id="document" name="document" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
@@ -43,8 +45,17 @@
             </form>
           </section>
           <section class="panel tasks">
-            <div class="panel-title"><h2>任務清單</h2><button id="refresh" type="button" class="ghost small">重新整理</button></div>
+            <div class="panel-title"><h2>任務清單 <span class="hint" id="task-count"></span></h2><button id="refresh" type="button" class="ghost small">重新整理</button></div>
+            <div class="task-filter-grid">
+              <label for="task-search">搜尋任務</label>
+              <input id="task-search" maxlength="100" placeholder="搜尋標題、內容、分類"/>
+              <label for="status-filter">狀態篩選</label>
+              <select id="status-filter"><option value="all">全部狀態</option><option value="new">未開始</option><option value="running">審查中</option><option value="awaiting_human">待人工核定</option><option value="needs_rework">退回重議</option><option value="closed">已結案</option><option value="failed">執行失敗</option></select>
+              <label for="category-filter">分類篩選</label>
+              <select id="category-filter"><option value="all">全部分類</option><option value="一般">一般</option><option value="文件審查">文件審查</option><option value="研究分析">研究分析</option><option value="計畫討論">計畫討論</option><option value="其他">其他</option></select>
+            </div>
             <div id="task-list" class="task-list" aria-live="polite">讀取中…</div>
+            <p class="hint">每次最多顯示 100 筆符合條件的任務，可調整搜尋與篩選。</p>
           </section>
         </div>
         <section class="panel detail hidden" id="detail">
@@ -72,6 +83,8 @@
               </form>
             </div>
           </section>
+          <div class="progress-head"><strong id="progress-label">尚未開始</strong><span class="hint">本回合雙 AI 回覆進度</span></div>
+          <div class="progress-track"><div id="progress-fill"></div></div>
           <div class="board" id="board"></div>
           <section id="human-section" class="human-review hidden">
             <h3>人工最終審查</h3>

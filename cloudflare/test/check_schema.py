@@ -28,3 +28,11 @@ for i in range(3):
       (f"attempt-{i}",'test-id','round-id','gemini','independent','2026-10-20T11:00:00.000Z','test-id',2,'2026-10-20T00:00:00.000Z',2))
     assert row.rowcount == (1 if i<2 else 0), f"cap failed at request {i}"
 print('PASS: login rate tables and atomic call-count caps')
+
+# v0.8 category migration preserves existing D1 tasks and original Word text.
+columns=[row[1] for row in conn.execute('PRAGMA table_info(tasks)')]
+assert 'category' in columns
+assert conn.execute("SELECT category FROM tasks WHERE id='test-id'").fetchone()[0]=='一般'
+conn.execute("UPDATE tasks SET category='文件審查' WHERE id='test-id'")
+assert conn.execute("SELECT document_text FROM tasks WHERE id='test-id'").fetchone()[0]=='Word文字'
+print('PASS: v0.8 category migration and source preservation')

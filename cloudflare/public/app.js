@@ -1,5 +1,6 @@
 const $=id=>document.getElementById(id);
 let activeTask=null, activeManualStep=null, modelsConfigured=false, working=false;
+let listVersion=0,searchTimer=null;
 const statusLabel={new:'尚未開始',running:'AI 審查中',awaiting_human:'待你審查',needs_rework:'退回重議',closed:'已由你結案',failed:'執行失敗'};
 const phaseLabel={independent:'第一階段｜獨立分析',critique:'第二階段｜交叉審查',proposal:'第三階段｜個別修正建議'};
 function showAlert(message,error=false){const el=$('notice');el.textContent=String(message);el.classList.toggle('error',error);el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),6500);}
@@ -25,9 +26,13 @@ function renderDetail(task){
  $('manual-section').classList.toggle('hidden',!manual);
  $('manual-begin').classList.toggle('hidden',!manual||!['new','needs_rework','failed'].includes(task.status));
  $('manual-step').classList.add('hidden');
- $('detail-title').textContent=task.title;$('detail-status').textContent=statusLabel[task.status]||task.status;
+ $('detail-title').textContent=task.title;$('detail-status').textContent=(task.category||'一般')+' · '+(statusLabel[task.status]||task.status);
  $('detail-instruction').textContent=task.instruction;$('detail-word').textContent=task.document_text||'（此任務沒有 Word 附件）';
- const last=task.rounds?.at(-1);const items=last?.outputs||[];const board=$('board');board.replaceChildren();
+ const last=task.rounds?.at(-1);const items=last?.outputs||[];
+ const completed=items.length;
+ $('progress-label').textContent=last?`第 ${last.ordinal} 回合 · ${completed}／6 份 AI 回覆`:'尚未開始';
+ $('progress-fill').style.width=(Math.min(6,completed)/6*100)+'%';
+ const board=$('board');board.replaceChildren();
  for(const [provider,label] of [['chatgpt','ChatGPT / OpenAI API'],['gemini','Gemini API']]){
   const lane=cell('','ai-lane');const title=document.createElement('h3');title.textContent=label;lane.append(title);
   for(const phase of ['independent','critique','proposal']){
@@ -46,8 +51,26 @@ async function loadTask(id){
  const data=await api('/tasks/'+id);renderDetail(data);
  if(data.mode==='manual'&&data.status==='running')await loadManualNext(id);
 }
-async function loadList(){const result=await api('/tasks');const root=$('task-list');root.replaceChildren();if(!result.tasks.length){root.append(cell('尚無任務，請先建立一筆。','hint'));return;}
- for(const t of result.tasks){const btn=document.createElement('button');btn.className='task-item'+(activeTask?.id===t.id?' selected':'');btn.type='button';const title=document.createElement('strong');title.textContent=t.title;btn.append(title,cell(`${statusLabel[t.status]||t.status} · ${t.mode==='manual'?'網頁版輔助':'API'} · ${t.document_name||'無附件'}`,'small-note'));btn.addEventListener('click',()=>loadTask(t.id).catch(e=>showAlert(e.message,true)));root.append(btn);}
+async function loadList(){
+ const id=++listVersion;
+ const filters=new URLSearchParams();
+ const q=$('task-search').value.trim();
+ const status=$('status-filter').value;
+ const category=$('category-filter').value;
+ if(q)filters.set('q',q);
+ if(status!=='all')filters.set('status',status);
+ if(category!=='all')filters.set('category',category);
+ const result=await api('/tasks'+(filters.size?'?'+filters.toString():''));
+ if(id!==listVersion)return; // Ignore late search responses.
+ const root=$('task-list');root.replaceChildren();
+ $('task-count').textContent='（顯示 '+result.tasks.length+' 筆）';
+ if(!result.tasks.length){root.append(cell('沒有符合條件的任務。','hint'));return;}
+ for(const t of result.tasks){
+  const btn=document.createElement('button');btn.className='task-item'+(activeTask?.id===t.id?' selected':'');btn.type='button';
+  const title=document.createElement('strong');title.textContent=t.title;
+  btn.append(title,cell(`${t.category||'一般'} · ${statusLabel[t.status]||t.status} · ${t.mode==='manual'?'網頁版輔助':'API'} · ${t.document_name||'無附件'}`,'small-note'));
+  btn.addEventListener('click',()=>loadTask(t.id).catch(e=>showAlert(e.message,true)));root.append(btn);
+ }
 }
 $('login-form').addEventListener('submit',async ev=>{ev.preventDefault();try{await api('/login',{method:'POST',body:{password:$('password').value}});$('password').value='';setAuth(true);await Promise.all([refreshSettings(),loadList()]);showAlert('已登入工作臺');}catch(e){showAlert(e.message,true);}});
 $('signout').addEventListener('click',async()=>{try{await api('/logout',{method:'POST'});}finally{activeTask=null;setAuth(false);}});
@@ -130,3 +153,10 @@ $('decision').addEventListener('change',()=>{
  $('review-note').required=rework;
  $('review-note').placeholder=rework?'請具體說明需要重議的問題；下回合會傳給兩個 AI':'記錄採納理由或審查要求';
 });
+
+$('task-search').addEventListener('input',()=>{
+ clearTimeout(searchTimer);
+ searchTimer=setTimeout(()=>loadList().catch(e=>showAlert(e.message,true)),250);
+});
+$('status-filter').addEventListener('change',()=>loadList().catch(e=>showAlert(e.message,true)));
+$('category-filter').addEventListener('change',()=>loadList().catch(e=>showAlert(e.message,true)));
