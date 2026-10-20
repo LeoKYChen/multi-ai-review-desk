@@ -124,8 +124,8 @@ async function advance(env,taskId,fetcher){
 async function humanReview(env,taskId,req){
  const input=await body(req);
  assert(input&&['accept_chatgpt','accept_gemini','partial','reject','rework'].includes(input.decision)&&validText(input.note,10000),422,'審查內容有誤');
- const t=await task(env,taskId);assert(t.status==='awaiting_human',409,'兩位 AI 尚未各自提出修正建議');
  if(input.decision==='rework')assert(!!input.note?.trim(),422,'退回重新討論時，請填寫具體理由，供下一回合使用');
+ const t=await task(env,taskId);assert(t.status==='awaiting_human',409,'兩位 AI 尚未各自提出修正建議');
  const round=await roundFor(env,taskId);assert(round?.state==='awaiting_human',409,'回合尚未進入人工審查');
  const now=iso(),status=input.decision==='rework'?'needs_rework':'closed';
  await env.DB.batch([
