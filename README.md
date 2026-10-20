@@ -1,31 +1,24 @@
 # Multi-AI 雙 AI 協作工作臺
 
-> 個人專用 · 2026-10-20 · 目標上線 2026-11-01 · **尚未部署**
+> 私人使用｜開發中｜目標日期：2026-11-01｜**尚未部署**
 
-核心工作流程：**交辦一次 → ChatGPT 與 Gemini 各自獨立分析 → 交叉審查 → 各自提出修正建議 → 使用者最終核定**。
+你只需交辦一次，**ChatGPT／OpenAI API** 與 **Gemini API** 即可各自分析、互相交換意見，再各自提出修正建議；**只有你能決定採納、退回或結案**。
 
-這個專案是獨立的通用協作工作臺；不整合觀護人學習平臺、不為 342 題或法律研究設計專用功能。
+**目前版本為 v0.3.0 開發原型**，完成前後端程式與本機自動測試，尚未部署 Cloudflare D1/Workers，也尚未取得或驗證真實模型 API 憑證。
 
-## 開發現況
+## 架構
+- Cloudflare Workers：網頁、任務控制、模型 API 呼叫。
+- Cloudflare D1：交辦指令、從 Word 擷取的文字、AI 初稿、交叉意見、個別建議及人工決定。
+- 無 R2、無 Google Drive、無 Word 原始檔永久儲存。
+- 單一人類審查者，沒有第三個 AI 總審查官。
+- 不與觀護人學習平臺整合，也不開發特定題庫、法律研究或文件專用功能。
 
-此分支為 **D1-only Word 後端初始提交**，尚未具備完整雲端使用介面，也**尚未連接真實 ChatGPT 或 Gemini**。
+目前介面提供 Word .docx 上傳（最多 3MB）、登入、任務清單、兩欄 AI 意見、人工最後決定。沒有模型憑證時，不會輸出虛構 AI 回覆。
 
-- Cloudflare Workers：處理文字任務、D1 紀錄、審查狀態。
-- Cloudflare D1：儲存指令、從 Word 擷取的文字、AI 初稿與交叉評論、各自修正建議及人工決定。
-- .docx：上傳後僅擷取正文文字（包括一般表格文字），不保存 Word 原檔。
-- Cloudflare R2、Google Drive：**第一版均不使用**。
-- 上線權限：僅供使用者本人，AI 只能提出建議，不得直接修改原始文字、合併建議或自行結案。
+## 驗證
+參閱 [Cloudflare 後端說明](cloudflare/README.md)。
 
-## 安全限制與測試
+## 上線前仍需完成
+實際 Cloudflare Worker/D1 部署與端對端驗收；模型 API 憑證及個人預算確認；登入限速及私有存取防護；D1 備份與復原測試。**不要將 API Key 或工作臺登入密碼提交到 GitHub。**
 
-**請勿將本開發版直接當作正式站部署。** 網站介面、前後端整合、模型登入與成本控制、部署驗收、恢復機制尚待完成。
-
-目前只有開發用 Bearer Token 驗證與 D1 原型；正式版需再確認網頁端的安全登入方案。不得在瀏覽器客戶端或 GitHub 專案中嵌入 OWNER_TOKEN。
-
-### D1 後端
-
-參閱 [Cloudflare 後端文件](cloudflare/README.md)。目前規格要求單份 .docx 不超過 3 MB，擷取內容不得超過 50,000 字元；圖片、特殊公式、註解與複雜排版不保證保留。
-
-文件擷取失敗應明確報錯；AI 交叉審查須在兩個模型的初稿都完成後開始；使用者以外的角色不得作最後審核。
-
-技術參考：[aixwangtw/feedback-desk](https://github.com/aixwangtw/feedback-desk)。本實作是重新建立的 D1-only 後端原型，**不是** Feedback Desk 原版完整 fork。
+程式參考開源專案 [Feedback Desk](https://github.com/aixwangtw/feedback-desk) 的任務協作概念，但目前不是完整 fork。

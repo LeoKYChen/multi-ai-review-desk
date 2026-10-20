@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#18293f" />
+  <title>雙 AI 協作工作臺</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand"><span class="logo">↔</span><div><strong>Multi-AI 協作工作臺</strong><small>ChatGPT × Gemini · 由你最終審查</small></div></div>
+      <button id="signout" class="ghost hidden" type="button">登出</button>
+    </header>
+    <main>
+      <section id="login" class="panel login">
+        <div class="eyebrow">PRIVATE WORKSPACE</div>
+        <h1>登入你的工作臺</h1>
+        <p>任務及 AI 討論記錄保存在 Cloudflare D1；Word 原檔不會永久保存。</p>
+        <form id="login-form"><label for="password">工作臺密碼</label><input id="password" type="password" autocomplete="current-password" required minlength="16"/><button type="submit">登入</button></form>
+        <p class="hint">此登入需在 Cloudflare 先設定 OWNER_PASSWORD 與 OWNER_TOKEN；不會在瀏覽器保存 API 密鑰。</p>
+      </section>
+      <section id="workspace" class="hidden">
+        <div class="heading"><div><div class="eyebrow">WORKSPACE</div><h1>我的任務</h1><p>只需交辦一次；兩個 AI 獨立審查、互相討論並各自提出建議，最後由你決定。</p></div><span class="pill" id="model-state">檢查模型連線…</span></div>
+        <div class="cols">
+          <section class="panel task-create">
+            <h2>建立任務</h2>
+            <form id="task-form">
+              <label for="title">任務標題</label><input id="title" name="title" maxlength="180" required placeholder="例如：請審查這份文字"/>
+              <label for="instruction">交辦指令</label><textarea id="instruction" name="instruction" maxlength="20000" required rows="5" placeholder="說明希望 ChatGPT、Gemini 分析的問題及審查方向"></textarea>
+              <label for="document">Word 附件（選填）</label><input id="document" name="document" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+              <div class="hint">僅接受 .docx，限 3 MB；擷取文字後不保留原檔。圖片、特殊公式與版面不會完整保留。</div>
+              <button type="submit" id="task-submit">儲存任務</button>
+            </form>
+          </section>
+          <section class="panel tasks">
+            <div class="panel-title"><h2>任務清單</h2><button id="refresh" type="button" class="ghost small">重新整理</button></div>
+            <div id="task-list" class="task-list" aria-live="polite">讀取中…</div>
+          </section>
+        </div>
+        <section class="panel detail hidden" id="detail">
+          <div class="panel-title"><div><div class="eyebrow">SELECTED TASK</div><h2 id="detail-title">任務內容</h2></div><span id="detail-status" class="pill"></span></div>
+          <div class="document-block"><h3>原始交辦內容</h3><p id="detail-instruction" class="text-wrap"></p><h3>Word 擷取文字</h3><p id="detail-word" class="text-wrap"></p></div>
+          <div class="panel-title margin-top"><h3>雙 AI 審查進度</h3><button type="button" id="run" class="primary">開始／接續雙 AI 審查</button></div>
+          <p id="run-hint" class="hint">只有在兩個模型 API 均設定完成後，才能啟動真實審查。</p>
+          <div class="board" id="board"></div>
+          <section id="human-section" class="human-review hidden">
+            <h3>人工最終審查</h3>
+            <p class="hint">兩個 AI 的修正建議僅供參考；系統不會替你修改原稿或自動結案。</p>
+            <form id="review-form">
+              <label for="decision">審查決定</label>
+              <select id="decision" required>
+                <option value="accept_chatgpt">採納 ChatGPT 建議</option><option value="accept_gemini">採納 Gemini 建議</option>
+                <option value="partial">部分採納／自行綜整</option><option value="reject">不採納任何建議</option><option value="rework">退回重新討論</option>
+              </select>
+              <label for="review-note">你的審查說明（選填）</label><textarea id="review-note" rows="4" maxlength="10000" placeholder="記錄採納理由或退回要求"></textarea>
+              <button type="submit">提交我的最終決定</button>
+            </form>
+          </section>
+          <div id="history" class="history"></div>
+        </section>
+      </section>
+    </main>
+    <div id="notice" class="notice hidden" role="status" aria-live="polite"></div>
+    <footer>本專案為個人協作審查工具。AI 的意見不是你的最終核定。</footer>
+  </div>
+</body>
+</html>

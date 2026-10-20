@@ -1,9 +1,13 @@
-# Copy to wrangler.toml and replace the ID from your Cloudflare D1 database.
 name = "multi-ai-review-desk"
 main = "src/worker.mjs"
 compatibility_date = "2026-10-20"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
 
 [[d1_databases]]
 binding = "DB"
@@ -11,4 +15,9 @@ database_name = "multi-ai-review-desk-db"
 database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 migrations_dir = "migrations"
 
-# Never commit tokens: npx wrangler secret put OWNER_TOKEN
+# Secrets are never committed to GitHub:
+# npx wrangler secret put OWNER_TOKEN
+# npx wrangler secret put OWNER_PASSWORD
+# npx wrangler secret put OPENAI_API_KEY
+# npx wrangler secret put GEMINI_API_KEY
+# OPENAI_MODEL and GEMINI_MODEL must be configured separately; model names are not assumed.
