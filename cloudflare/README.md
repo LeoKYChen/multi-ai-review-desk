@@ -67,3 +67,7 @@ python3 test/check_schema.py
 - 重建資料庫前先備份，回復作業應先在**另一個測試用 D1 資料庫**驗證 SQL 匯入，不可未核對就覆蓋正式資料。官方參考：https://developers.cloudflare.com/d1/best-practices/import-export-data/
 
 注意：此版還未經真實 Cloudflare Worker/D1 部署、真實 API 帳號及網路安全壓力測試；切勿誤認已達生產環境驗收標準。
+
+## 使用現有 D1 建立測試站（尚未部署）
+
+新的部署工作流程 `deploy-staging.yml` 採 GitHub Actions opt-in，預設不執行；需由使用者在 GitHub 安全設定頁填入非機密的 D1 與 Cloudflare Account ID，以及部署 Token 與個人登入密碼等 Secrets。步驟見[Cloudflare D1 私人測試站部署指南](../docs/Cloudflare_D1_私人測試站部署指南.md)。只有設定 `ENABLE_STAGING_DEPLOY=true` 且有新的開發分支提交才會啟動部署。正式操作私人文件前，須先啟用 Cloudflare Access。

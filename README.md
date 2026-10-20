@@ -4,7 +4,7 @@
 
 你只需交辦一次，**ChatGPT／OpenAI API** 與 **Gemini API** 即可各自分析、互相交換意見，再各自提出修正建議；**只有你能決定採納、退回或結案**。
 
-**目前版本為 v0.5.0 開發原型**，完成前後端程式與本機自動測試，尚未部署 Cloudflare D1/Workers，也尚未取得或驗證真實模型 API 憑證。
+**目前版本為 v0.6.0 部署準備版原型**，完成前後端程式與本機自動測試，尚未部署 Cloudflare D1/Workers，也尚未取得或驗證真實模型 API 憑證。
 
 ## 架構
 - Cloudflare Workers：網頁、任務控制、模型 API 呼叫。
@@ -30,3 +30,7 @@
 - 真實模型 API 呼叫採 **預設關閉**，必須由使用者在 Cloudflare 伺服器環境明確設 `MODEL_API_ENABLED=true` 才能啟動。
 - 預設最多每個任務 12 次、全站每天 12 次模型**呼叫嘗試**；單次失敗也計入，以免重試意外增加帳單。這是次數上限，不是金額保證。
 - 手動匯出 D1 SQL 備份：`cd cloudflare && npm run backup:remote`（僅使用者本機執行，需要 Wrangler 登入；備份不會上傳 GitHub）。
+
+## 私人測試站部署準備
+
+已新增 **受控、預設不啟動** 的 Cloudflare staging GitHub Actions 工作流程，參閱 [Cloudflare D1 部署指南](docs/Cloudflare_D1_私人測試站部署指南.md)。請先將 D1 ID 和 Account ID 設為 GitHub Variables，將 Cloudflare API Token 和兩個工作臺認證值設為 GitHub Secrets，未授權前不會部署。
