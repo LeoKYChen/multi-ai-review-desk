@@ -29,6 +29,12 @@
           <section class="panel task-create">
             <h2>建立任務</h2>
             <form id="task-form">
+              <label for="mode">執行方式</label>
+              <select id="mode" name="mode">
+                <option value="manual" selected>使用現有 ChatGPT／Gemini 網頁版（需手動貼回回覆）</option>
+                <option value="api">使用 API 全自動模式（需另行設定憑證與額度）</option>
+              </select>
+              <p class="hint">網頁版不需要 API，但每個階段仍須自行將提示詞貼到對應網站，並把回覆貼回工作臺；不是一鍵自動控制兩個網頁帳號。</p>
               <label for="title">任務標題</label><input id="title" name="title" maxlength="180" required placeholder="例如：請審查這份文字"/>
               <label for="instruction">交辦指令</label><textarea id="instruction" name="instruction" maxlength="20000" required rows="5" placeholder="說明希望 ChatGPT、Gemini 分析的問題及審查方向"></textarea>
               <label for="document">Word 附件（選填）</label><input id="document" name="document" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
@@ -46,6 +52,26 @@
           <div class="document-block"><h3>原始交辦內容</h3><p id="detail-instruction" class="text-wrap"></p><h3>Word 擷取文字</h3><p id="detail-word" class="text-wrap"></p></div>
           <div class="panel-title margin-top"><h3>雙 AI 審查進度</h3><button type="button" id="run" class="primary">開始／接續雙 AI 審查</button></div>
           <p id="run-hint" class="hint">只有在兩個模型 API 均設定完成後，才能啟動真實審查。</p>
+          <section id="manual-section" class="human-review hidden">
+            <h3>網頁版輔助審查</h3>
+            <p class="hint">工作臺只儲存一次原始任務。依序產生給 ChatGPT 與 Gemini 的完整指令；請在網頁版執行後貼回 AI 的實際回覆。手動提交無法驗證它真的是該模型產生。</p>
+            <button type="button" id="manual-begin" class="ghost">開始／重新開始手動審查回合</button>
+            <div id="manual-step" class="hidden">
+              <p id="manual-heading" class="pill"></p>
+              <label for="manual-prompt">本階段完整指令（複製至對應 AI 網頁）</label>
+              <textarea id="manual-prompt" readonly rows="8"></textarea>
+              <button type="button" id="manual-copy" class="ghost">複製這份指令</button>
+              <div class="provider-links">
+                <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">開啟 ChatGPT 網頁</a>
+                <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer">開啟 Gemini 網頁</a>
+              </div>
+              <form id="manual-form">
+                <label for="manual-answer">將該 AI 的回覆貼回此處</label>
+                <textarea id="manual-answer" rows="7" maxlength="50000" required placeholder="貼上剛才那個 AI 的完整回覆；不得假冒另一個模型"></textarea>
+                <button id="manual-save" type="submit">儲存此階段回覆，進入下一步</button>
+              </form>
+            </div>
+          </section>
           <div class="board" id="board"></div>
           <section id="human-section" class="human-review hidden">
             <h3>人工最終審查</h3>

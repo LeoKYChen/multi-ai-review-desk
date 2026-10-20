@@ -14,5 +14,7 @@ jobs:
           node-version: '22'
       - name: Word parser and Worker API unit tests
         run: cd cloudflare && npm test
+      - name: Browser JavaScript syntax
+        run: node --check cloudflare/public/app.js
       - name: D1 schema and source immutability
         run: python3 cloudflare/test/check_schema.py

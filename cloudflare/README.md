@@ -1,6 +1,6 @@
 # Multi-AI 雙 AI 協作工作臺 · Cloudflare 原型
 
-**狀態：尚未部署、尚未實際驗證兩個模型的憑證／費用。** 此版已建立 D1-only API、靜態網頁及 OpenAI/Gemini API 接入程式，但憑證由持有者設定後才能實際執行模型。
+**狀態：尚未部署、尚未實際驗證兩個模型的憑證／費用。** 此版已建立 D1-only API、靜態網頁、網頁版輔助模式及 OpenAI/Gemini API 接入程式，但憑證由持有者設定後才能實際執行模型。
 
 ## 架構及限制
 
@@ -44,8 +44,13 @@ python3 test/check_schema.py
 - `GET /api/settings`：僅顯示兩個模型是否設定，不回傳 API Key。
 - `POST /api/tasks`：一次交辦，可附 .docx；只儲存擷取文字。
 - `GET /api/tasks`、`GET /api/tasks/:id`：查詢清單與完整審查紀錄。
-- `POST /api/tasks/:id/advance`：執行下一階段 AI 請求；每次最多各呼叫兩模型一次，失敗可重試未完成模型。
+- `POST /api/tasks/:id/advance`：僅 API 模式；執行下一階段模型 API 請求，失敗可重試未完成模型。
+- `POST /api/tasks/:id/manual-begin`：僅網頁版輔助模式；建立手動審查回合。
+- `GET /api/tasks/:id/manual-next`：取得下一個待執行模型及完整階段提示詞。
+- `POST /api/tasks/:id/manual-output`：由你貼回模型回覆，標記 `manual_unverified`，不宣稱已驗證模型來源。
 - `POST /api/tasks/:id/review`：僅由人類登入工作臺進行最終決定；`rework` 可重新建立回合。
+
+**注意：網頁版輔助模式無法一鍵代替你操控兩個網頁帳號，必須自行將階段指令與 AI 回覆轉貼，這只是無 API 的過渡方案。**
 
 **已停用上一版示範型 `POST /api/rounds/:id/outputs` 接口**，避免瀏覽器或外部程序直接冒充 AI 提交內容。模型輸出僅由 Workers 後端呼叫 API 後寫入 D1。
 

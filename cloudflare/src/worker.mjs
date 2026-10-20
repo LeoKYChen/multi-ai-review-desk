@@ -2,6 +2,7 @@
 import { extractDocxText, MAX_DOCX_BYTES } from './docx.mjs';
 import { callModel, makePrompt, ready } from './models.mjs';
 import { hasHumanAuth, login, logoutHeaders } from './session.mjs';
+import { beginManual, getManualNext, submitManual } from './manual.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -19,11 +20,12 @@ async function body(req){
 }
 async function task(env,id){const value=await env.DB.prepare('SELECT * FROM tasks WHERE id=?').bind(id).first();assert(value,404,'找不到任務');return value;}
 async function roundFor(env,id){return env.DB.prepare('SELECT * FROM task_rounds WHERE task_id=? ORDER BY ordinal DESC LIMIT 1').bind(id).first();}
-async function recordsFor(env,roundId){return (await env.DB.prepare('SELECT provider,phase,body,created_at FROM ai_outputs WHERE round_id=? ORDER BY created_at').bind(roundId).all()).results;}
+async function recordsFor(env,roundId){return (await env.DB.prepare('SELECT provider,phase,body,created_at,source FROM ai_outputs WHERE round_id=? ORDER BY created_at').bind(roundId).all()).results;}
 async function createTask(req,env){
  assert(req.headers.get('Content-Type')?.startsWith('multipart/form-data'),415,'請使用 multipart/form-data');
  assert(Number(req.headers.get('Content-Length')||0)<MAX_DOCX_BYTES+100000,413,'附件過大');
  const form=await req.formData();const title=form.get('title'),instruction=form.get('instruction'),file=form.get('document');
+ const mode=form.get('mode')||'manual';assert(mode==='manual'||mode==='api',422,'工作模式不正確');
  assert(typeof title==='string'&&title.trim()&&title.length<=180,422,'任務標題無效');
  assert(typeof instruction==='string'&&instruction.trim()&&instruction.length<=20000,422,'交辦指令無效');
  let documentText='',documentName=null,warnings=[];
@@ -35,9 +37,9 @@ async function createTask(req,env){
   documentText=extracted.text;documentName=file.name;warnings=extracted.warnings;
  }
  const id=uuid(),now=iso();
- await env.DB.prepare('INSERT INTO tasks (id,title,instruction,document_text,document_name,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)')
-  .bind(id,title.trim(),instruction.trim(),documentText,documentName,'new',now,now).run();
- return respond({id,title:title.trim(),status:'new',document_name:documentName,extracted_characters:documentText.length,warnings},201);
+ await env.DB.prepare('INSERT INTO tasks (id,title,instruction,document_text,document_name,status,created_at,updated_at,mode) VALUES (?,?,?,?,?,?,?,?,?)')
+  .bind(id,title.trim(),instruction.trim(),documentText,documentName,'new',now,now,mode).run();
+ return respond({id,title:title.trim(),status:'new',mode,document_name:documentName,extracted_characters:documentText.length,warnings},201);
 }
 async function detail(env,id){
  const t=await task(env,id);
@@ -60,6 +62,7 @@ const phases=['independent','critique','proposal'];
 async function advance(env,taskId,fetcher){
  assert(ready(env),409,'尚未設定 OpenAI 與 Gemini 的 API 憑證及模型；不會啟動或假裝完成 AI 審查');
  const t=await task(env,taskId);
+ assert(t.mode==='api',409,'此任務使用網頁版輔助模式，請從手動審查畫面操作');
  assert(['new','needs_rework','running','failed'].includes(t.status),409,'這張任務不能啟動 AI');
  const nowSec=Math.floor(Date.now()/1000);
  const lock=await env.DB.prepare('UPDATE tasks SET run_lock_until=? WHERE id=? AND run_lock_until < ?')
@@ -124,10 +127,17 @@ export default {async fetch(req,env){
   if(pathname==='/api/logout'&&req.method==='POST')return respond({authenticated:false},200,logoutHeaders());
   assert(await hasHumanAuth(req,env),401,'請先登入');
   if(pathname==='/api/health'&&req.method==='GET')return respond({ok:true,storage:'D1',models_configured:ready(env)});
-  if(pathname==='/api/settings'&&req.method==='GET')return respond({models_configured:ready(env),provider_names:['chatgpt','gemini'],uses_paid_api_credentials:true});
+  if(pathname==='/api/settings'&&req.method==='GET')return respond({models_configured:ready(env),manual_mode_available:true,provider_names:['chatgpt','gemini'],uses_paid_api_credentials:true});
   if(pathname==='/api/tasks'&&req.method==='POST')return await createTask(req,env);
   if(pathname==='/api/tasks'&&req.method==='GET'){
-   const rows=(await env.DB.prepare('SELECT id,title,status,document_name,created_at FROM tasks ORDER BY created_at DESC LIMIT 100').all()).results;return respond({tasks:rows});
+   const rows=(await env.DB.prepare('SELECT id,title,status,mode,document_name,created_at FROM tasks ORDER BY created_at DESC LIMIT 100').all()).results;return respond({tasks:rows});
+  }
+  const manualRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/manual-(begin|next|output)$/);
+  if(manualRoute){
+   const [,id,action]=manualRoute;
+   if(action==='begin'&&req.method==='POST')return respond(await beginManual(env,id),201);
+   if(action==='next'&&req.method==='GET')return respond(await getManualNext(env,id));
+   if(action==='output'&&req.method==='POST')return respond(await submitManual(env,id,await body(req)),201);
   }
   const matched=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})(?:\/(advance|review))?$/);
   if(matched){
