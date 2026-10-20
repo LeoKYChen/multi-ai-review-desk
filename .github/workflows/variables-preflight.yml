@@ -28,7 +28,18 @@ jobs:
           failed = False
           for key, value, pattern in checks:
               valid = bool(re.fullmatch(pattern, value))
-              print(('PASS' if valid else 'FAIL') + ': ' + key + ' format')
+              if valid:
+              print('PASS: ' + key + ' format')
+          elif not value:
+              print('FAIL: ' + key + ' is missing in repository and staging environment')
+          elif value != value.strip():
+              print('FAIL: ' + key + ' contains leading/trailing whitespace')
+          elif key == 'CLOUDFLARE_ACCOUNT_ID' and len(value) != 32:
+              print('FAIL: ' + key + ' should be 32 characters; received length ' + str(len(value)))
+          elif key == 'CLOUDFLARE_ACCOUNT_ID':
+              print('FAIL: ' + key + ' contains non-hexadecimal characters')
+          else:
+              print('FAIL: ' + key + ' format')
               failed |= not valid
           print('This preflight does not read credential values, deploy Workers, or modify D1.')
           sys.exit(1 if failed else 0)
