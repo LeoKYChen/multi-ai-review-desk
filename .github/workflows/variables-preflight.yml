@@ -29,18 +29,18 @@ jobs:
           for key, value, pattern in checks:
               valid = bool(re.fullmatch(pattern, value))
               if valid:
-              print('PASS: ' + key + ' format')
-          elif not value:
-              print('FAIL: ' + key + ' is missing in repository and staging environment')
-          elif value != value.strip():
-              print('FAIL: ' + key + ' contains leading/trailing whitespace')
-          elif key == 'CLOUDFLARE_ACCOUNT_ID' and len(value) != 32:
-              print('FAIL: ' + key + ' should be 32 characters; received length ' + str(len(value)))
-          elif key == 'CLOUDFLARE_ACCOUNT_ID':
-              print('FAIL: ' + key + ' contains non-hexadecimal characters')
-          else:
-              print('FAIL: ' + key + ' format')
+                  print('PASS: ' + key + ' format')
+              elif not value:
+                  print('FAIL: ' + key + ' missing in repository/staging environment')
+              elif value != value.strip():
+                  print('FAIL: ' + key + ' contains leading/trailing whitespace')
+              elif key == 'CLOUDFLARE_ACCOUNT_ID' and len(value) != 32:
+                  print('FAIL: ' + key + ': expected 32 chars, got ' + str(len(value)))
+              elif key == 'CLOUDFLARE_ACCOUNT_ID':
+                  print('FAIL: ' + key + ' contains non-hex characters')
+              else:
+                  print('FAIL: ' + key + ' format')
               failed |= not valid
-          print('This preflight does not read credential values, deploy Workers, or modify D1.')
+          print('Read-only syntax check, no secrets used, no D1 or Worker actions.')
           sys.exit(1 if failed else 0)
           PY
