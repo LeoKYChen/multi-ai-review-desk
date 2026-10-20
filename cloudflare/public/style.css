@@ -8,3 +8,13 @@
 .progress-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px;margin-top:18px}
 .progress-track{height:8px;border-radius:12px;overflow:hidden;background:#e0eaf2;margin:9px 0 15px}
 .progress-track>div{background:var(--blue);height:100%;transition:width .2s}
+
+.round-reader{border:1px solid var(--edge);border-radius:12px;background:var(--soft);padding:14px;margin:16px 0}
+.round-reader-controls{display:grid;grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) auto;gap:10px;align-items:end}
+.round-reader-controls label{display:block;font-size:12px;margin-bottom:5px}.round-reader-controls select{width:100%}
+.round-reader-controls button{white-space:nowrap}
+.selected-review{background:#fff;border:1px solid var(--edge);border-radius:10px;padding:13px;margin-top:10px}
+.round-review-title{font-weight:700;font-size:13px}.round-note{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.65}
+.round-history-entry{display:flex;justify-content:space-between;gap:12px;border:1px solid var(--edge);border-radius:9px;padding:10px 12px;margin:9px 0}
+.round-history-entry.selected{border-color:var(--blue);background:#edf6fc}.round-history-info{min-width:0;overflow-wrap:anywhere}
+@media(max-width:630px){.round-reader-controls{grid-template-columns:1fr 1fr}.round-reader-controls button{grid-column:1/-1}}

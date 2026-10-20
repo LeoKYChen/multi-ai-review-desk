@@ -1,5 +1,6 @@
 const $=id=>document.getElementById(id);
 let activeTask=null, activeManualStep=null, modelsConfigured=false, working=false;
+const roundView={taskId:null,ordinal:null,phase:'all'};
 let listVersion=0,searchTimer=null;
 const statusLabel={new:'尚未開始',running:'AI 審查中',awaiting_human:'待你審查',needs_rework:'退回重議',closed:'已由你結案',failed:'執行失敗'};
 const phaseLabel={independent:'第一階段｜獨立分析',critique:'第二階段｜交叉審查',proposal:'第三階段｜個別修正建議'};
@@ -20,6 +21,43 @@ function updateRun(){
 }
 function cell(text,cls){const el=document.createElement('div');if(cls)el.className=cls;el.textContent=text;return el;}
 function phaseNode(name,text){const root=cell('','phase');const strong=document.createElement('strong');strong.textContent=phaseLabel[name];root.append(strong,cell(text||'尚未執行'));return root;}
+const reviewLabels={accept_chatgpt:'採納 ChatGPT',accept_gemini:'採納 Gemini',partial:'部分採納',reject:'不採納',rework:'退回重新討論'};
+function showRoundHistory(task){
+ const rounds=task.rounds||[],latest=rounds.at(-1);
+ if(roundView.taskId!==task.id){roundView.taskId=task.id;roundView.ordinal=latest?.ordinal??null;roundView.phase='all';}
+ if(!rounds.some(x=>x.ordinal===roundView.ordinal))roundView.ordinal=latest?.ordinal??null;
+ const current=rounds.find(x=>x.ordinal===roundView.ordinal),isLatest=!!current&&current.ordinal===latest?.ordinal;
+ $('round-view').classList.toggle('hidden',!current);
+ const picker=$('round-picker');picker.replaceChildren();
+ for(const r of rounds){const option=document.createElement('option');option.value=String(r.ordinal);option.textContent=`第 ${r.ordinal} 回合 · ${(r.outputs||[]).length}／6`;picker.append(option);}
+ if(current)picker.value=String(current.ordinal);
+ $('phase-picker').value=roundView.phase;$('latest-round').disabled=isLatest||!current;
+ $('round-info').textContent=current?`正在檢視第 ${current.ordinal} 回合（${isLatest?'最新回合':'歷史唯讀'}）；切換不會更動原文與審查進度。`:'尚無回合';
+ const decision=$('selected-review');decision.replaceChildren();
+ if(current){decision.append(cell(`第 ${current.ordinal} 回合｜${current.review?(reviewLabels[current.review.decision]||current.review.decision):'尚無人工決定'}`,'round-review-title'));
+  decision.append(cell(current.review?(current.review.note||'（無補充）'):'尚未人工核定','round-note'));
+  if(current.review?.created_at)decision.append(cell(`核定時間：${current.review.created_at}`,'hint'));
+  if(!isLatest)decision.append(cell('目前為唯讀歷史；要執行核定請先回到最新回合。','hint'));}
+ const board=$('board');board.replaceChildren();
+ for(const [provider,label] of [['chatgpt','ChatGPT'],['gemini','Gemini']]){
+  const lane=cell('','ai-lane'),title=document.createElement('h3');title.textContent=label;lane.append(title);
+  for(const phase of ['independent','critique','proposal']){
+   if(roundView.phase!=='all'&&roundView.phase!==phase)continue;
+   const o=current?.outputs?.find(x=>x.provider===provider&&x.phase===phase);
+   lane.append(phaseNode(phase,o?(o.source==='manual_unverified'?'〔網頁版手動貼入，來源未驗證〕\n':'')+o.body:'尚未提交'));
+  }board.append(lane);
+ }
+ $('human-section').classList.toggle('hidden',task.status!=='awaiting_human'||!isLatest);
+ const history=$('history');history.replaceChildren();
+ for(const r of rounds){
+  const row=cell('','round-history-entry'+(r.ordinal===current?.ordinal?' selected':''));
+  const info=cell('','round-history-info');info.append(cell(`第 ${r.ordinal} 回合 · ${(r.outputs||[]).length}／6 份 AI 意見`,'round-review-title'));
+  info.append(cell(r.review?`${reviewLabels[r.review.decision]||r.review.decision}｜${r.review.note||'（無補充）'}`:'尚未人工核定','round-note'));
+  const btn=document.createElement('button');btn.type='button';btn.className='ghost small';btn.textContent='檢視';btn.disabled=r.ordinal===current?.ordinal;
+  btn.setAttribute('aria-label',`檢視第 ${r.ordinal} 回合`);btn.addEventListener('click',()=>{roundView.ordinal=r.ordinal;showRoundHistory(task);});
+  row.append(info,btn);history.append(row);
+ }
+}
 function renderDetail(task){
  activeTask=task;$('detail').classList.remove('hidden');
  const manual=task.mode==='manual';
@@ -32,19 +70,8 @@ function renderDetail(task){
  const completed=items.length;
  $('progress-label').textContent=last?`第 ${last.ordinal} 回合 · ${completed}／6 份 AI 回覆`:'尚未開始';
  $('progress-fill').style.width=(Math.min(6,completed)/6*100)+'%';
- const board=$('board');board.replaceChildren();
- for(const [provider,label] of [['chatgpt','ChatGPT / OpenAI API'],['gemini','Gemini API']]){
-  const lane=cell('','ai-lane');const title=document.createElement('h3');title.textContent=label;lane.append(title);
-  for(const phase of ['independent','critique','proposal']){
-   const output=items.find(x=>x.provider===provider&&x.phase===phase);
-   const text=output?(output.source==='manual_unverified'?'〔網頁版手動貼入，來源未驗證〕\n':'')+output.body:null;
-   lane.append(phaseNode(phase,text));
-  }
-  board.append(lane);
- }
- $('human-section').classList.toggle('hidden',task.status!=='awaiting_human');
+ showRoundHistory(task);
  $('run-hint').textContent= manual?'網頁版輔助模式：需要你在 ChatGPT、Gemini 網頁操作，並把每次回覆貼回工作臺。':!modelsConfigured?'尚未設定模型 API，不會自動產生模擬結果。':task.status==='awaiting_human'?'兩位 AI 均已提出建議，請由你決定。':task.status==='closed'?'此任務已由你結案。':'點一次按鈕，系統會依序完成獨立分析、交叉審查、各自提出建議。';
- const history=$('history');history.replaceChildren();for(const round of task.rounds||[]){const article=document.createElement('article');const mark=round.review?`${round.review.decision}：${round.review.note||'（無補充）'}`:'尚未人工審查';article.textContent=`第 ${round.ordinal} 回合｜${round.state}｜${mark}`;history.append(article);}
  updateRun();
 }
 async function loadTask(id){
@@ -105,6 +132,7 @@ $('manual-begin').addEventListener('click',async()=>{
  const id=activeTask.id;
  try{
   await api(`/tasks/${id}/manual-begin`,{method:'POST'});
+  roundView.taskId=null;
   await loadTask(id);await loadList();
   showAlert('已開始手動審查，請使用下方完整指令。');
  }catch(e){showAlert(e.message,true);}
@@ -160,3 +188,14 @@ $('task-search').addEventListener('input',()=>{
 });
 $('status-filter').addEventListener('change',()=>loadList().catch(e=>showAlert(e.message,true)));
 $('category-filter').addEventListener('change',()=>loadList().catch(e=>showAlert(e.message,true)));
+$('round-picker').addEventListener('change',()=>{
+ if(!activeTask)return;const n=Number($('round-picker').value);
+ if(activeTask.rounds?.some(x=>x.ordinal===n)){roundView.ordinal=n;showRoundHistory(activeTask);}
+});
+$('phase-picker').addEventListener('change',()=>{
+ if(!activeTask)return;const phase=$('phase-picker').value;
+ if(['all','independent','critique','proposal'].includes(phase)){roundView.phase=phase;showRoundHistory(activeTask);}
+});
+$('latest-round').addEventListener('click',()=>{
+ if(!activeTask)return;roundView.ordinal=activeTask.rounds?.at(-1)?.ordinal??null;showRoundHistory(activeTask);
+});

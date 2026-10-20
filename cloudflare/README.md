@@ -89,3 +89,7 @@ python3 test/check_schema.py
 - 登入後介面新增任務分類、搜尋、狀態和分類篩選，以及每回合 0 至 6 份模型意見的進度顯示。
 - **離線 JSON 備份尚未支援直接匯入 D1**；這是不同的資料格式。離線單檔仍在 [offline/index.html](../offline/index.html)，不接雲端 D1。
 - 仍需實際 Cloudflare Workers/D1 授權、環境部署及端對端操作驗收；目前不適合存入私人敏感資料。
+
+## v0.9 前端開發：歷次回合比較（尚未部署）
+
+已同步離線版的歷次回合閱讀模式至雲端前端程式：可切換回合、只看某一階段 ChatGPT 與 Gemini 的意見、檢視該回合人工採納或退回的說明。瀏覽歷史時不能對舊回合送出新核定；最新回合的 AI 執行進度與提交流程不受歷史篩選影響。資料庫仍使用原有 task_rounds / ai_outputs / human_decisions，不需新增 D1 migration。本功能只完成程式與 CI 語法、結構測試，**未實際部署到 Cloudflare，也未在遠端瀏覽器驗收**。

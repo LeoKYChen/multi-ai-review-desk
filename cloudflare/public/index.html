@@ -85,6 +85,16 @@
           </section>
           <div class="progress-head"><strong id="progress-label">尚未開始</strong><span class="hint">本回合雙 AI 回覆進度</span></div>
           <div class="progress-track"><div id="progress-fill"></div></div>
+          <section id="round-view" class="round-reader hidden" aria-label="歷次討論與意見對照">
+            <div class="panel-title"><h3>歷次討論／雙 AI 意見對照</h3></div>
+            <div class="round-reader-controls">
+              <div><label for="round-picker">檢視回合</label><select id="round-picker"></select></div>
+              <div><label for="phase-picker">對照階段</label><select id="phase-picker"><option value="all">全部三階段</option><option value="independent">獨立分析</option><option value="critique">交叉審查</option><option value="proposal">最終修正建議</option></select></div>
+              <button type="button" id="latest-round" class="ghost small">回到最新回合</button>
+            </div>
+            <p id="round-info" class="hint"></p>
+            <div class="selected-review" id="selected-review" aria-live="polite"></div>
+          </section>
           <div class="board" id="board"></div>
           <section id="human-section" class="human-review hidden">
             <h3>人工最終審查</h3>
