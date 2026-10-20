@@ -14,6 +14,8 @@ jobs:
           node-version: '22'
       - name: Word parser and Worker API unit tests
         run: cd cloudflare && npm test
+      - name: Offline v0.8 self-contained HTML regression checks
+        run: node --test offline/test/*.test.mjs
       - name: Browser JavaScript syntax
         run: node --check cloudflare/public/app.js
       - name: D1 schema and source immutability
