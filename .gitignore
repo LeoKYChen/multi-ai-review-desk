@@ -11,3 +11,7 @@ cloudflare/wrangler.toml
 
 private-backups/
 **/private-backups/
+
+# Offline v0.8 backups and plaintext import plans must never be committed.
+private-imports/
+**/private-imports/

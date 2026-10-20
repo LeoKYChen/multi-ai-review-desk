@@ -60,3 +60,15 @@
 ## 雲端部署暫停，不影響開發
 
 Cloudflare 部署及三項授權／D1 預檢均改為**手動觸發**，不會因開發分支 push 自動執行。登入金鑰或 D1 部署問題暫不處理，先以已測試的 `offline/index.html` 作為可用版本。`main` 保持原樣，正式站尚未上線。
+
+## v0.9：離線 JSON 備份轉換預覽（不連雲端）
+
+已加入 [離線備份轉 D1 資料規格](docs/離線備份轉D1資料規格.md) 和純本機的 `tools/convert-offline-backup.mjs`。
+
+只檢查離線 JSON 結構與預計轉換筆數、不寫檔：
+
+```bash
+node tools/convert-offline-backup.mjs "你的離線備份.json"
+```
+
+明確使用 `--output private-imports/計畫.json` 才輸出含完整私人文字的匯入計畫。新增 Node 與 SQLite 模擬匯入、重複匯入回滾測試。**真正將資料寫入 Cloudflare D1 的功能仍未開放，也沒有啟動遠端部署或模型 API。**
