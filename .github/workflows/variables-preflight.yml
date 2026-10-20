@@ -8,6 +8,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    environment: cloudflare-staging
     timeout-minutes: 3
     env:
       CLOUD_ACCOUNT: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
