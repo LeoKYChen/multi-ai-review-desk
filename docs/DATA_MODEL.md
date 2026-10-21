@@ -48,14 +48,6 @@ final_versions.source_snapshot_json = fixed verification snapshot at approval
 ALTER TABLE tasks ADD COLUMN template_key TEXT NOT NULL DEFAULT 'general'
   CHECK(template_key IN ('general','exam_essay'));
 
-CREATE TABLE human_drafts (
-  task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE RESTRICT,
-  base_final_id TEXT REFERENCES final_versions(id) ON DELETE RESTRICT,
-  body TEXT NOT NULL DEFAULT '' CHECK(length(body) <= 100000),
-  revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
-  updated_at TEXT NOT NULL
-);
-
 CREATE TABLE final_versions (
   id TEXT PRIMARY KEY,
   task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE RESTRICT,
@@ -72,6 +64,15 @@ CREATE TABLE final_versions (
 );
 CREATE INDEX idx_final_versions_task ON final_versions(task_id,version_no DESC);
 
+CREATE TABLE human_drafts (
+  task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE RESTRICT,
+  base_final_id TEXT REFERENCES final_versions(id) ON DELETE RESTRICT,
+  body TEXT NOT NULL DEFAULT '' CHECK(length(body) <= 100000),
+  revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
+  updated_at TEXT NOT NULL
+);
+
+
 CREATE TRIGGER final_no_update BEFORE UPDATE ON final_versions
 BEGIN SELECT RAISE(ABORT,'FINAL_VERSION_IMMUTABLE'); END;
 CREATE TRIGGER final_no_delete BEFORE DELETE ON final_versions
@@ -81,7 +82,7 @@ WHEN EXISTS(SELECT 1 FROM final_versions WHERE task_id=OLD.id)
 BEGIN SELECT RAISE(ABORT,'TASK_WITH_FINAL_IMMUTABLE'); END;
 ~~~
 
-**遷移順序注意**：SQLite 可容許先建立對尚未存在資料表的參照，但供 Codex 實作時應先建立 final_versions，再建立 human_drafts；上述展示依概念將 human_drafts 放前，實際 SQL 必須調整順序。需使用 D1/SQLite 本機遷移測試確認所有 FK、trigger 可操作。正式版對已核定任務只允許封存（archive），不提供永久刪除。
+**遷移順序注意**：先建立 final_versions，再建立引用它的 human_drafts。需用 D1/SQLite 本機遷移測試確認外鍵與 trigger；正式版對已核定任務只允許封存（archive），不提供永久刪除。
 
 人工草稿使用原子 CAS：
 ~~~sql
