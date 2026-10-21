@@ -119,10 +119,12 @@ export function initReviewUi({api,$,showAlert,getActiveTask,reload}){
    row.append(item(s.claim_text,'round-review-title'),
     item('來源：'+(s.source_label||'待補充')+'｜狀態：'+s.status+'｜版本 '+s.revision,'hint'));
    if(s.status!=='verified')row.append(button('我已親自核對',async()=>{
+    const label=s.source_label?.trim()||window.prompt('請填寫你實際查閱的來源名稱：');
+    if(!label?.trim())return;
     const reason=window.prompt('請填寫核對依據、來源內容或核對方式：');
     if(!reason?.trim())return;
     await api('/tasks/'+taskId+'/source-checks/'+s.id,{method:'PATCH',body:{
-     expected_revision:s.revision,status:'verified',evidence_note:reason.trim()
+     expected_revision:s.revision,status:'verified',source_label:label.trim(),evidence_note:reason.trim()
     }});
     await refreshSources();showAlert('已記錄由你親自核對的查證結果');
    }));
