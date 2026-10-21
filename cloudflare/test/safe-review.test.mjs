@@ -5,7 +5,8 @@ import {fileURLToPath} from 'node:url';
 import {dirname,resolve} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {requireSafeReady,nextProvider,attemptPolicy,nextPhase,startSafeReview,
- consumeSafeMessage,recoveryState,authorizeRetry,reconcileSafe} from '../src/safe-review.mjs';
+ consumeSafeMessage,recoveryState,authorizeRetry,reconcileSafe,resumeParsedReview} from '../src/safe-review.mjs';
+import {resolveCritique} from '../src/review-evidence.mjs';
 
 function fixture(){
  const dir=dirname(fileURLToPath(import.meta.url));
@@ -231,4 +232,60 @@ test('Idempotency-Key 不能用不同人工理由替換已確認重試',async()=
  await authorizeRetry(x.env,x.id,payload,'retry-reason-unique');
  await assert.rejects(()=>authorizeRetry(x.env,x.id,{...payload,reason:'不同理由'},'retry-reason-unique'),
   /請求的內容不一致/);
+});
+
+
+test('有效 JSON 異議在三階段保存完整六份，最終仍等待本人核定',async()=>{
+ const x=fixture(),calls=[];
+ await startSafeReview(x.env,x.id);
+ for(let n=0;n<6;n++){
+  const msg=x.shift();assert.ok(msg,'expected queue message '+n);
+  const r=await consumeSafeMessage(x.msg(msg),x.env,{...x.deps,
+   callModel:async(provider,_env,prompt)=>{
+    calls.push(provider);
+    if(prompt.includes('【第一階段：獨立分析】'))return provider+' 的初評原句';
+    if(prompt.includes('【第二階段：交叉審查】')){
+     const target=provider==='chatgpt'?'gemini':'chatgpt';
+     const payload={objections:[{target_provider:target,quote:target+' 的初評原句',reason:'應再查證'}]};
+     return '我提出評論。\nBEGIN_FEEDBACK_OBJECTIONS\n'+JSON.stringify(payload)+'\nEND_FEEDBACK_OBJECTIONS';
+    }
+    return provider+' 最終修正建議';
+   }});
+  assert.equal(r.outcome,n===5?'awaiting_human':'queued');
+ }
+ assert.deepEqual(calls,['chatgpt','gemini','chatgpt','gemini','chatgpt','gemini']);
+ assert.equal(x.sql.prepare('SELECT COUNT(*) n FROM ai_outputs').get().n,6);
+ assert.equal(x.sql.prepare('SELECT COUNT(*) n FROM review_objections').get().n,2);
+ assert.equal(x.sql.prepare("SELECT COUNT(*) n FROM critique_parse_status WHERE status='valid'").get().n,2);
+ assert.equal(x.sql.prepare('SELECT status FROM tasks').get().status,'awaiting_human');
+ assert.equal(x.sql.prepare('SELECT queue_requested FROM tasks').get().queue_requested,0);
+ assert.equal(x.sql.prepare('SELECT COUNT(*) n FROM final_versions').get().n,0);
+});
+
+test('解析失敗：本人逐份確認後只續行缺漏 proposal，不重複付費 critique',async()=>{
+ const x=fixture();const start=await startSafeReview(x.env,x.id);
+ for(let n=0;n<4;n++){
+  const msg=x.shift();
+  await consumeSafeMessage(x.msg(msg),x.env,{...x.deps,callModel:async(provider,_e,prompt)=>{
+   if(prompt.includes('【第一階段'))return provider+' 初評';
+   return '可閱讀評論，但缺結構化異議';
+  }});
+ }
+ assert.equal((await recoveryState(x.env,x.id)).status,'paused_parse');
+ assert.equal(x.sql.prepare('SELECT queue_requested FROM tasks').get().queue_requested,0);
+ const critiques=x.sql.prepare("SELECT id FROM ai_outputs WHERE phase='critique' ORDER BY provider").all();
+ assert.equal(critiques.length,2);
+ await resolveCritique(x.env,x.id,start.round_id,critiques[0].id);
+ assert.equal((await resumeParsedReview(x.env,x.id,start.round_id)).resumed,false);
+ await resolveCritique(x.env,x.id,start.round_id,critiques[1].id);
+ assert.equal((await resumeParsedReview(x.env,x.id,start.round_id)).resumed,true);
+ assert.equal(x.sql.prepare('SELECT queue_requested FROM tasks').get().queue_requested,1);
+ let proposalCount=0;
+ for(let n=0;n<2;n++){
+  await consumeSafeMessage(x.msg(x.shift()),x.env,{...x.deps,
+   callModel:async(provider)=>{proposalCount++;return provider+' 新版修正建議';}});
+ }
+ assert.equal(proposalCount,2);
+ assert.equal(x.sql.prepare('SELECT COUNT(*) n FROM ai_outputs').get().n,6);
+ assert.equal((await recoveryState(x.env,x.id)).status,'awaiting_human');
 });
