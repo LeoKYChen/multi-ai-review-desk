@@ -8,6 +8,7 @@ import { renderTaskMarkdown } from './export.mjs';
 import {parseTaskFilters,buildTaskListQuery} from './task-query.mjs';
 import { safeEnabled, startSafeReview, recoveryState, authorizeRetry, consumeSafeMessage, reconcileSafe, resumeParsedReview } from './safe-review.mjs';
 import {getObjections,createHumanObjection,correctObjection,resolveCritique,mergeObjections,splitObjection,listSources,createSource,updateSource} from './review-evidence.mjs';
+import {getDraft,putDraft,listFinals,getFinal,approveFinal} from './human-finals.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -59,6 +60,9 @@ async function humanReview(env,taskId,req){
  const input=await body(req);
  assert(input&&['accept_chatgpt','accept_gemini','partial','reject','rework'].includes(input.decision)&&validText(input.note,10000),422,'審查內容有誤');
  if(input.decision==='rework')assert(!!input.note?.trim(),422,'退回重新討論時，請填寫具體理由，供下一回合使用');
+ // The old decision-only endpoint cannot close a task without saving a
+ // genuine, owner-edited immutable final version.
+ if(input.decision!=='rework')fail(409,'請先儲存人工草稿，再使用 /finals 正式核定');
  const t=await task(env,taskId);assert(t.status==='awaiting_human',409,'兩位 AI 尚未各自提出修正建議');
  const round=await roundFor(env,taskId);assert(round?.state==='awaiting_human',409,'回合尚未進入人工審查');
  const now=iso(),status=input.decision==='rework'?'needs_rework':'closed';
@@ -100,6 +104,19 @@ export default {async fetch(req,env){
    if(action==='next'&&req.method==='GET')return respond(await getManualNext(env,id));
    if(action==='output'&&req.method==='POST')return respond(await submitManual(env,id,await body(req)),201);
   }
+  // Phase 4: version-protected human-only drafts and append-only finals.
+  const draftRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/draft$/);
+  if(draftRoute){
+   if(req.method==='GET')return respond(await getDraft(env,draftRoute[1]));
+   if(req.method==='PUT')return respond(await putDraft(env,draftRoute[1],await body(req)));
+  }
+  const finalsRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/finals$/);
+  if(finalsRoute){
+   if(req.method==='GET')return respond(await listFinals(env,finalsRoute[1]));
+   if(req.method==='POST')return respond(await approveFinal(env,finalsRoute[1],await body(req),req.headers.get('Idempotency-Key')),201);
+  }
+  const finalRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/finals\/([a-f0-9-]{36})$/);
+  if(finalRoute&&req.method==='GET')return respond(await getFinal(env,finalRoute[1],finalRoute[2]));
   // Phase 3: immutable AI critique with owner-curated objections and citations.
   const objectionRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/objections$/);
   if(objectionRoute){
@@ -155,7 +172,10 @@ export default {async fetch(req,env){
   return respond({error:'Not Found'},404);
  }catch(err){
   const status=err.status||(err.message?.startsWith('DOCX_')?422:500);
-  return respond({error:status===500?'處理失敗':err.message},status);
+  const payload={error:status===500?'處理失敗':err.message};
+  if(err.code)payload.code=err.code;
+  if(err.details)payload.details=err.details;
+  return respond(payload,status);
  }
 },
  async queue(batch,env){
