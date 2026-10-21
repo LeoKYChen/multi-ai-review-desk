@@ -7,7 +7,8 @@ export function ready(env) {
 }
 export function makePrompt(task, phase, provider, records, maxLength=24000, reworkNote='') {
  const rework=typeof reworkNote==='string'&&reworkNote.trim()?`\n\n【上一回合人類審查者要求重新討論的事項】\n${reworkNote.trim()}\n請針對上述要求提出新的分析，但本回合初稿仍須與另一個 AI 獨立完成。`:'';
- const input = `任務：${task.title}\n交辦指令：${task.instruction}\n\nWord 擷取文字：\n${task.document_text || '(未附 Word 文件)'}${rework}`;
+ const template=task.template_key==='exam_essay'?'\n\n【國家考試申論批改模板】\n請先獨立解析題目爭點，再就爭點掌握、規範或理論、涵攝論證、結構表達四方面批改。模擬分數僅供學習參考，不得假裝正式閱卷。法律、學理、考古題出處如果尚待查證，務必標示；不得編造考題年份、題次、法條或裁判。':'';
+ const input = `任務：${task.title}\n交辦指令：${task.instruction}\n\nWord 擷取文字：\n${task.document_text || '(未附 Word 文件)'}${template}${rework}`;
  if (input.length > maxLength) throw new Error('交辦內容超過此模式支援的輸入上限，請拆分任務；原始 D1 紀錄不受影響');
  if (phase === 'independent') return `${input}\n\n【第一階段：獨立分析】請獨立提出初步意見，尚不可看到其他 AI 的答案。指出理由及不確定事項。`;
  const get = (p,s) => records.find(x=>x.provider===p&&x.phase===s)?.body || '';
