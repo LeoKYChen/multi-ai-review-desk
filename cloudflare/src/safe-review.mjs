@@ -7,6 +7,7 @@
 import {callModel,makePrompt,ready} from './models.mjs';
 import {apiEnabled,reserveModelCall,markModelCall} from './guardrails.mjs';
 import {getPreviousReworkNote} from './review-context.mjs';
+import {critiqueStatements,allCritiquesValidated} from './review-evidence.mjs';
 
 const phases=['independent','critique','proposal'],providers=['chatgpt','gemini'];
 const uuid=()=>crypto.randomUUID(),iso=()=>new Date().toISOString();
@@ -135,6 +136,10 @@ export async function authorizeRetry(env,taskId,input,key){
 }
 async function advanceSaved(env,job,records,leaseHeld=false){
  const db=env.DB,next=nextPhase(job.phase,records),now=iso();
+ if(job.phase==='critique'&&next.state==='paused_parse'&&
+    await allCritiquesValidated(env,job.round_id)){
+  next.phase='proposal';next.state='queued';
+ }
  const expectedRevision=job.revision+(leaseHeld?1:0);
  const expectedState=leaseHeld?'running':'queued';
  const statements=[db.prepare("UPDATE review_jobs SET phase=?,state=?,reason_code=?,lease_until=0,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND state=?")
@@ -200,9 +205,12 @@ export async function consumeSafeMessage(message,env,deps={}){
  try{
   await run(db,"UPDATE review_model_attempts SET state='response_received',updated_at=? WHERE id=? AND state='request_started'",iso(),attId);
   const stamp=iso();
+  const critique=job.phase==='critique'?
+   critiqueStatements(db,{body:response,outputId:outId,roundId:job.round_id,records:current,createdAt:stamp}):null;
   await db.batch([
    db.prepare("INSERT INTO ai_outputs(id,round_id,provider,phase,body,created_at,source) VALUES(?,?,?,?,?,?,'api')").bind(outId,job.round_id,provider,job.phase,response,stamp),
-   db.prepare("UPDATE review_model_attempts SET state='persisted',ai_output_id=?,updated_at=? WHERE id=? AND state='response_received'").bind(outId,stamp,attId)
+   db.prepare("UPDATE review_model_attempts SET state='persisted',ai_output_id=?,updated_at=? WHERE id=? AND state='response_received'").bind(outId,stamp,attId),
+   ...(critique?.statements||[])
   ]);
   try{await (deps.markModelCall||markModelCall)(env,reservation,true);}catch{}
  }catch{
@@ -213,6 +221,24 @@ export async function consumeSafeMessage(message,env,deps={}){
  try{const state=await advanceSaved(env,job,await entries(db,job.round_id),true);message.ack?.();return {outcome:state,provider};}
  catch{message.retry?.({delaySeconds:60});return {outcome:'retry_safe_control'};}
 }
+/** Owner reviewed formerly unparseable critique; resume only after BOTH critiques
+ * are valid/resolved. Never re-call either already persisted critique. */
+export async function resumeParsedReview(env,taskId,roundId){
+ const db=env.DB,job=await one(db,'SELECT * FROM review_jobs WHERE task_id=? AND round_id=?',taskId,roundId);
+ if(!job)return {resumed:false,reason:'manual_or_no_job'};
+ if(job.state!=='paused_parse'||job.phase!=='critique')
+  return {resumed:false,reason:'not_waiting_for_parse'};
+ if(!await allCritiquesValidated(env,roundId))return {resumed:false,reason:'another_critique_pending'};
+ const stamp=iso(),id=uuid();
+ const r=await db.batch([
+  db.prepare("UPDATE review_jobs SET phase='proposal',state='queued',reason_code=NULL,lease_until=0,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND state='paused_parse' AND phase='critique'").bind(stamp,job.id,job.revision),
+  db.prepare("INSERT INTO queue_outbox(id,job_id,action,state,created_at,updated_at) SELECT ?,?,'resume','pending',?,? WHERE changes()=1").bind(id,job.id,stamp,stamp)
+ ]);
+ if((r[0].meta?.changes??0)!==1)return {resumed:false,reason:'concurrent'};
+ if(safeEnabled(env)&&ready(env)&&typeof env.AI_REVIEW_QUEUE?.send==='function')await dispatch(env,job.id);
+ return {resumed:true,phase:'proposal',queue_pending:true};
+}
+
 export async function reconcileSafe(env){
  requireSafeReady(env);
  const db=env.DB,now=Math.floor(Date.now()/1000);
