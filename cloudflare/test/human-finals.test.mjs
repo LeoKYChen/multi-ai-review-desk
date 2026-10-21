@@ -120,3 +120,46 @@ test('舊審查端點不能繞過人工定稿直接關閉任務',async()=>{
  assert.equal(reply.status,409);
  assert.match((await reply.json()).error,/人工草稿/);
 });
+
+
+test('實際登入 API：草稿、不可覆寫核定與完整 MD 匯出保留查證快照',async()=>{
+ const {d,env}=fixture();env.OWNER_TOKEN='z'.repeat(48);
+ const request=(path,method='GET',body,headers={})=>worker.fetch(
+  new Request('https://example.workers.dev/api/tasks/'+taskId+path,{
+   method,headers:{Authorization:'Bearer '+env.OWNER_TOKEN,...headers,
+    ...(body===undefined?{}:{'Content-Type':'application/json'})},
+   body:body===undefined?undefined:JSON.stringify(body)
+  }),env);
+ const draft=await request('/draft','PUT',{body:'本人自行校訂之正式文字',expected_revision:0});
+ assert.equal(draft.status,200);assert.equal((await draft.json()).revision,1);
+ const final=await request('/finals','POST',{
+  expected_draft_revision:1,base_final_id:null,decision:'partial',
+  note:'本人核定',acknowledge_unverified:true
+ },{'Idempotency-Key':'final-unique-for-http'});
+ assert.equal(final.status,201);
+ const formal=await final.json();
+ assert.equal(formal.version_no,1);
+ d.prepare("UPDATE source_checks SET status='verified',verified_by='human',verified_at='t2' WHERE id='source1'").run();
+ const exportRes=await request('/export.md');
+ assert.equal(exportRes.status,200);
+ const markdown=await exportRes.text();
+ for(const term of ['本人自行校訂之正式文字','人工正式核定版本','核定當時查證狀態：pending',
+    '目前查證狀態','目前狀態：verified'])
+  assert.ok(markdown.includes(term),'export missing '+term);
+ assert.ok(!markdown.includes(env.OWNER_TOKEN),'must never export owner token');
+ const latest=await request('/finals/'+formal.id);
+ assert.equal(latest.status,200);
+ const data=await latest.json();
+ assert.equal(data.verification_at_approval[0].status,'pending');
+ assert.equal(data.current_verification[0].status,'verified');
+});
+
+test('核定 API 不允許無 Idempotency-Key 或舊版草稿直接結案',async()=>{
+ const {env}=fixture();env.OWNER_TOKEN='z'.repeat(48);
+ const req=new Request('https://example.workers.dev/api/tasks/'+taskId+'/finals',{
+  method:'POST',headers:{Authorization:'Bearer '+env.OWNER_TOKEN,'Content-Type':'application/json'},
+  body:JSON.stringify({decision:'partial',note:'',expected_draft_revision:1,base_final_id:null})
+ });
+ const r=await worker.fetch(req,env);
+ assert.equal(r.status,422);
+});
