@@ -44,7 +44,10 @@ python3 test/check_schema.py
 - `GET /api/settings`：僅顯示兩個模型是否設定，不回傳 API Key。
 - `POST /api/tasks`：一次交辦，可附 .docx；只儲存擷取文字。
 - `GET /api/tasks`、`GET /api/tasks/:id`：查詢清單與完整審查紀錄。
-- `POST /api/tasks/:id/advance`：僅 API 模式；執行下一階段模型 API 請求，失敗可重試未完成模型。
+- `POST /api/tasks/:id/advance`：Phase 2 起僅建立**安全背景 Queue 工作**；背景或 API 設定未明確啟用時回 409，不會走舊版同步付費呼叫。
+- `GET /api/tasks/:id/recovery`：顯示已保存的模型結果、各次呼叫狀態與可能重複計費警告。
+- `POST /api/tasks/:id/retry`：需要 `Idempotency-Key`、job revision 及本人明確確認可能費用；只重試缺漏的模型步驟。
+- `POST /api/jobs/reconcile`：登入本人可執行安全 outbox 重送與過期租約整理；不直接重跑結果未知的模型。
 - `POST /api/tasks/:id/manual-begin`：僅網頁版輔助模式；建立手動審查回合。
 - `GET /api/tasks/:id/manual-next`：取得下一個待執行模型及完整階段提示詞。
 - `POST /api/tasks/:id/manual-output`：由你貼回模型回覆，標記 `manual_unverified`，不宣稱已驗證模型來源。
@@ -94,11 +97,22 @@ python3 test/check_schema.py
 
 已同步離線版的歷次回合閱讀模式至雲端前端程式：可切換回合、只看某一階段 ChatGPT 與 Gemini 的意見、檢視該回合人工採納或退回的說明。瀏覽歷史時不能對舊回合送出新核定；最新回合的 AI 執行進度與提交流程不受歷史篩選影響。資料庫仍使用原有 task_rounds / ai_outputs / human_decisions，不需新增 D1 migration。本功能只完成程式與 CI 語法、結構測試，**未實際部署到 Cloudflare，也未在遠端瀏覽器驗收**。
 
-## v1.0 Queue 背景執行：目前僅無憑證測試
+## v1.0 Queue 背景執行：Phase 2 本地模擬驗證已通過，未部署
 
-- `src/background-review.mjs`、migration `0006_background_queue.sql` 新增背景排程。Queue 訊息只存 UUID，**沒有 Word 原文或模型 API Key**。
+- 現行 Worker 使用 `src/safe-review.mjs` 及 migration `0007`～`0010` 的持久化 job/attempt/outbox。舊 `src/background-review.mjs` 僅保留歷史測試，不是目前 Worker 使用的付費模型執行器。Queue 訊息只存 UUID，**沒有 Word 原文或模型 API Key**。
 - `POST /api/tasks/:id/advance` 在 `BACKGROUND_JOBS_ENABLED=true` 且兩家模型 API 與 Queue binding 都已完整設定時，只負責 enqueue，回傳 HTTP 202；Queue consumer 在用戶離線後接續執行。
-- 若背景模式未啟用，維持原有手動觸發 API 步驟的開發行為；**這不等於正式的一鍵全自動功能**。
-- 階段成功才派送下一個 Queue 工作；模型失敗不重複自動付費，須由使用者決定是否再次繼續。
+- 背景模式未啟用時，`/advance` 明確拒絕啟動自動模型流程；仍可使用 `manual` 網頁版輔助模式，不會藉此使用付費 API。
+- 模型呼叫先建立嘗試紀錄，收到回覆、寫入 D1 與 persisted 狀態分開管理；**結果不明時暫停並顯示可能重複計費**，不得盲目重試。人工 retry 有冪等與風險確認。
+- Phase 3 的結構化異議解析尚未實作，因此在兩份 `critique` 原文入庫後，**刻意停於 `paused_parse`**，不宣稱整個雙 AI 三階段自動完成。
+- outbox 可經登入者 `/api/jobs/reconcile` 或另外設定 Cron trigger（目前**未啟用**）進行安全重送。若 Queue 發送失敗且沒有 Cron，自動恢復可能等待本人操作；此限制須於正式上線前驗收。
 - 使用者不願提供 Key/Token 時，不會建立 Queue、開啟付費 API 或部署。
 - 防公開部署：`wrangler.toml.example` 以 `workers_dev=false` 作為預設；手動 staging 部署需額外滿足 `ACCESS_POLICY_VERIFIED=true`，否則工作直接跳過。這個變數本身不是 Access 的密碼學證明，**仍需在 Cloudflare 實際驗收 Access 政策**。
+
+
+## Phase 2 無憑證驗收結果（2026-10-21）
+
+- 依 `docs/WORKFLOW.md` 建立持久化工作引擎、獨立 attempt 狀態、Queue outbox、安全控制訊息重派，以及登入者可查詢／授權的 recovery 與 retry 端點。
+- 使用 `cloudflare/test/safe-review.test.mjs` 的**記憶體 SQLite、fake Queue 和 fake model**測試逾時、模型已回應但 D1 入庫失敗、併發重送、失效租約、重試防雙擊與費用風險警示；**沒有真正呼叫模型**。
+- 原版直接同步觸發模型的 Worker 路徑已移除，避免繞過 Phase 2 的持久化防護。
+- `cd cloudflare && npm test`、`python3 test/check_schema_v1.py` 及既有離線回歸測試均由 GitHub Actions 執行。詳細實測結果見 `../docs/PHASE_2_REPORT.md`。
+- 真實 Cloudflare Queue／D1、Cron、Access 與供應商 API 尚未實測、授權或部署。不得將模擬驗收等同正式服務已可用。
