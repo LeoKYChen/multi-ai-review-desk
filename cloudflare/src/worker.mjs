@@ -1,13 +1,12 @@
 /** D1-only private-review backend. Model calls require separately configured API keys. */
 import { extractDocxText, MAX_DOCX_BYTES } from './docx.mjs';
-import { callModel, makePrompt, ready } from './models.mjs';
+import { ready } from './models.mjs';
 import { hasHumanAuth, login, logoutHeaders } from './session.mjs';
 import { beginManual, getManualNext, submitManual } from './manual.mjs';
-import { guardedLogin, apiEnabled, reserveModelCall, markModelCall, modelCallCaps } from './guardrails.mjs';
+import { guardedLogin, apiEnabled, modelCallCaps } from './guardrails.mjs';
 import { renderTaskMarkdown } from './export.mjs';
-import { getPreviousReworkNote } from './review-context.mjs';
 import {parseTaskFilters,buildTaskListQuery} from './task-query.mjs';
-import { safeEnabled, startSafeReview, recoveryState, authorizeRetry, dispatchSafeOutbox, consumeSafeMessage, reconcileSafe } from './safe-review.mjs';
+import { safeEnabled, startSafeReview, recoveryState, authorizeRetry, consumeSafeMessage, reconcileSafe } from './safe-review.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -55,75 +54,6 @@ async function readFullTask(env,id){
  return {...t,rounds:result};
 }
 async function detail(env,id){return respond(await readFullTask(env,id));}
-async function newRound(env,taskId){
- const t=await task(env,taskId);assert(['new','needs_rework','failed'].includes(t.status),409,'任務狀態不可建立新回合');
- const prev=await env.DB.prepare('SELECT COALESCE(MAX(ordinal),0) AS n FROM task_rounds WHERE task_id=?').bind(taskId).first();
- const ordinal=prev.n+1,id=uuid(),now=iso();
- await env.DB.batch([
-  env.DB.prepare('INSERT INTO task_rounds (id,task_id,ordinal,state,created_at) VALUES (?,?,?,?,?)').bind(id,taskId,ordinal,'running',now),
-  env.DB.prepare("UPDATE tasks SET status='running',updated_at=? WHERE id=?").bind(now,taskId)
- ]);
- return {id,task_id:taskId,ordinal,state:'running'};
-}
-const phases=['independent','critique','proposal'];
-async function advance(env,taskId,fetcher){
- assert(ready(env)&&apiEnabled(env),409,'API 自動執行未啟用或缺少模型憑證；不會產生模擬結果，也不會向 API 計費');
- const t=await task(env,taskId);
- assert(t.mode==='api',409,'此任務使用網頁版輔助模式，請從手動審查畫面操作');
- assert(['new','needs_rework','running','failed'].includes(t.status),409,'這張任務不能啟動 AI');
- const nowSec=Math.floor(Date.now()/1000);
- const lock=await env.DB.prepare('UPDATE tasks SET run_lock_until=? WHERE id=? AND run_lock_until < ?')
-  .bind(nowSec+190,taskId,nowSec).run();
- assert((lock.meta?.changes??0)===1,409,'其他 AI 審查請求正在執行，請稍後再試');
- try {
- let round=(t.status==='running'?await roundFor(env,taskId):null);
- if(!round) round=await newRound(env,taskId);
- assert(round.state==='running',409,'回合狀態不允許繼續');
- const records=await recordsFor(env,round.id);
- const phase=phases.find(p=>records.filter(x=>x.phase===p).length!==2);
- if(!phase)return respond({status:'awaiting_human',message:'AI 建議已齊，等待你的決定'});
- const phaseIdx=phases.indexOf(phase);
- if(phaseIdx>0)assert(records.filter(x=>x.phase===phases[phaseIdx-1]).length===2,409,'前一階段尚未完成');
- const missing=['chatgpt','gemini'].filter(p=>!records.some(x=>x.provider===p&&x.phase===phase));
- let prompts;
- try {
-  const reviewNote=await getPreviousReworkNote(env,taskId,round.ordinal);
-  prompts=missing.map(provider=>({provider,prompt:makePrompt(t,phase,provider,records,24000,reviewNote)}));
- }
- catch(e){fail(422,e.message);}
- const replies=await Promise.allSettled(prompts.map(async x=>{
-   // Reservation counts attempts, even if the provider times out or fails.
-   const reservation=await reserveModelCall(env,{taskId,roundId:round.id,provider:x.provider,phase});
-   try {
-    const text=await callModel(x.provider,env,x.prompt,fetcher);
-    await markModelCall(env,reservation,true);
-    return {provider:x.provider,text};
-   } catch (e) {
-    await markModelCall(env,reservation,false);
-    throw e;
-   }
-  }));
- const errors=[];let successful=0;
- for(let i=0;i<replies.length;i++){
-  const result=replies[i];
-  if(result.status!=='fulfilled'){errors.push({provider:prompts[i].provider,message:result.reason?.message||'模型執行失敗'});continue;}
-  const now=iso();
-  try{
-   await env.DB.prepare('INSERT INTO ai_outputs (id,round_id,provider,phase,body,created_at) VALUES (?,?,?,?,?,?)')
-    .bind(uuid(),round.id,result.value.provider,phase,result.value.text,now).run();successful++;
-  }catch{errors.push({provider:result.value.provider,message:'儲存 AI 意見時發生衝突，請重新整理'});}
- }
- const updated=await recordsFor(env,round.id);
- const both=updated.filter(x=>x.phase==='proposal').length===2;
- if(both){const now=iso();await env.DB.batch([
-  env.DB.prepare("UPDATE task_rounds SET state='awaiting_human' WHERE id=? AND state='running'").bind(round.id),
-  env.DB.prepare("UPDATE tasks SET status='awaiting_human',updated_at=? WHERE id=? AND status='running'").bind(now,taskId)
- ]);}
- return respond({round_id:round.id,phase,successful,errors,status:both?'awaiting_human':'running',next_phase:both?null:phases.find(p=>updated.filter(x=>x.phase===p).length!==2)},200);
- } finally {
-   await env.DB.prepare('UPDATE tasks SET run_lock_until=0 WHERE id=?').bind(taskId).run();
- }
-}
 async function humanReview(env,taskId,req){
  const input=await body(req);
  assert(input&&['accept_chatgpt','accept_gemini','partial','reject','rework'].includes(input.decision)&&validText(input.note,10000),422,'審查內容有誤');
