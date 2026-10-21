@@ -11,6 +11,18 @@ test('staging requires explicit Access confirmation in addition to original two 
  assert.match(workflow,/inputs\.confirm == 'deploy-private-staging'/);
  assert.match(workflow,/grep -qx 'workers_dev = false'/);
 });
+test('reusable staging workflow cannot run on branch pushes and pins the reviewed source',()=>{
+ const workflow=txt('../../.github/workflows/deploy-staging.yml');
+ assert.match(workflow,/^  workflow_call:$/m);
+ assert.doesNotMatch(workflow,/^  push:$/m);
+ assert.doesNotMatch(workflow,/^  workflow_dispatch:$/m);
+ assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
+ assert.match(workflow,/github\.repository == 'LeoKYChen\/multi-ai-review-desk'/);
+ assert.match(workflow,/ref: "\\$\\{\\{ inputs\.source_sha \\}\\}"/);
+ assert.match(workflow,/git rev-parse HEAD/);
+ assert.match(workflow,/MODEL_API_ENABLED = "false"/);
+ assert.match(workflow,/BACKGROUND_JOBS_ENABLED = "false"/);
+});
 test('default Worker never creates a public workers.dev host',()=>{
  const sample=txt('../wrangler.toml.example');
  assert.match(sample,/^workers_dev = false$/m);
