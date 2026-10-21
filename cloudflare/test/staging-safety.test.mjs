@@ -18,7 +18,7 @@ test('reusable staging workflow cannot run on branch pushes and pins the reviewe
  assert.doesNotMatch(workflow,/^  workflow_dispatch:$/m);
  assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
  assert.match(workflow,/github\.repository == 'LeoKYChen\/multi-ai-review-desk'/);
- assert.match(workflow,/ref: "\\$\\{\\{ inputs\.source_sha \\}\\}"/);
+ assert.ok(workflow.includes('ref: "${{ inputs.source_sha }}"'));
  assert.match(workflow,/git rev-parse HEAD/);
  assert.match(workflow,/MODEL_API_ENABLED = "false"/);
  assert.match(workflow,/BACKGROUND_JOBS_ENABLED = "false"/);
