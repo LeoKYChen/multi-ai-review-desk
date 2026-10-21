@@ -1,2 +1,86 @@
-# multi-ai-review-desk
-multi-ai-review-desk
+# Multi-AI 雙 AI 協作工作臺
+
+> 私人使用｜開發中｜目標日期：2026-11-01｜**尚未部署**
+
+你只需交辦一次，**ChatGPT／OpenAI API** 與 **Gemini API** 即可各自分析、互相交換意見，再各自提出修正建議；**只有你能決定採納、退回或結案**。
+
+**目前版本為 v0.7.0 開發版原型**，完成前後端程式與本機自動測試，尚未部署 Cloudflare D1/Workers，也尚未取得或驗證真實模型 API 憑證。
+
+## 架構
+- Cloudflare Workers：網頁、任務控制、模型 API 呼叫。
+- Cloudflare D1：交辦指令、從 Word 擷取的文字、AI 初稿、交叉意見、個別建議及人工決定。
+- 無 R2、無 Google Drive、無 Word 原始檔永久儲存。
+- 單一人類審查者，沒有第三個 AI 總審查官。
+- 不與觀護人學習平臺整合，也不開發特定題庫、法律研究或文件專用功能。
+
+目前介面提供 Word .docx 上傳（最多 3MB）、登入、任務清單、兩欄 AI 意見及人工最後決定。另加入「網頁版輔助模式」：你在工作臺交辦一次任務，系統依順序產生 ChatGPT 與 Gemini 各階段的完整提示詞。你須自行在兩個網頁版操作並貼回其回覆（兩模型 × 三階段，共六次）；工作臺不會直接登入或讀取這些網頁對話。手動貼入內容會標記為「來源未驗證」。
+
+有模型 API 憑證時可選擇「API 自動模式」。沒有模型憑證時，不會輸出虛構 AI 回覆。
+
+## 驗證
+參閱 [Cloudflare 後端說明](cloudflare/README.md)。
+
+## 上線前仍需完成
+實際 Cloudflare Worker/D1 部署與端對端驗收；模型 API 憑證及個人預算確認；登入限速及私有存取防護；D1 備份與復原測試。**不要將 API Key 或工作臺登入密碼提交到 GitHub。**
+
+程式參考開源專案 [Feedback Desk](https://github.com/aixwangtw/feedback-desk) 的任務協作概念，但目前不是完整 fork。
+
+## v0.5 登入、費用與備份防護
+- 登入失敗採 D1 15 分鐘視窗限制；IP 僅以 HMAC 雜湊儲存，不寫入原始 IP。
+- 真實模型 API 呼叫採 **預設關閉**，必須由使用者在 Cloudflare 伺服器環境明確設 `MODEL_API_ENABLED=true` 才能啟動。
+- 預設最多每個任務 12 次、全站每天 12 次模型**呼叫嘗試**；單次失敗也計入，以免重試意外增加帳單。這是次數上限，不是金額保證。
+- 手動匯出 D1 SQL 備份：`cd cloudflare && npm run backup:remote`（僅使用者本機執行，需要 Wrangler 登入；備份不會上傳 GitHub）。
+
+## 私人測試站部署準備
+
+已新增 **受控、預設不啟動** 的 Cloudflare staging GitHub Actions 工作流程，參閱 [Cloudflare D1 部署指南](docs/Cloudflare_D1_私人測試站部署指南.md)。請先將 D1 ID 和 Account ID 設為 GitHub Variables，將 Cloudflare API Token 和兩個工作臺認證值設為 GitHub Secrets，未授權前不會部署。
+
+## v0.7：不依賴 Cloudflare 部署的新功能
+
+- **匯出完整 Markdown 審查紀錄**：登入後於任務詳情選擇「匯出完整紀錄（MD）」，保存原始交辦、Word 擷取文字、每回合雙 AI 意見、來源註記、人工核定結果與時間。無須儲存 Word 原始檔。匯出的 Markdown 內含私人資料，請勿公開分享。
+- **退回理由傳到下一回合**：選擇「退回重新討論」時必須填入具體理由；下一回合兩個 AI 都會看到此人工要求，但本回合的獨立分析仍不會直接看到對方本回合的答案。原始交辦內容保持不可覆寫。
+- **網頁版六階段進度**：介面顯示第 1 至 6 步，並繼續清楚標示手動貼入 AI 回覆的來源未驗證狀態。
+- 完成新功能的 Node 單元與 API 測試，GitHub CI 自動執行。**本版本仍未部署正式網站**。
+
+### 部署狀態與安全
+部署流程已改為**必須由使用者手動啟動**，且須另外滿足部署開關條件；一般推送開發分支不會自動部署。Cloudflare 授權問題暫時擱置，請勿將真實敏感文件上傳未驗收的測試站。
+
+## 離線工作臺 v0.8（已由使用者測試）
+
+- [直接開啟單檔 HTML](offline/index.html)（下載到電腦後用 Chrome/Edge 開啟）。
+- [詳細操作說明](offline/操作說明.md)。
+- 功能：本機自動儲存、離線讀取 .docx、六階段雙 AI 網頁版輔助、任務搜尋／狀態篩選、退回重議、Markdown 匯出及 JSON 備份／還原。
+- 此離線檔案只使用瀏覽器本機儲存區，未加密，不接 D1，不會自行呼叫 ChatGPT/Gemini；資料請定期匯出。**目前尚未將 v0.8 的全部功能移植到 Cloudflare 版，亦未完成雲端部署。**
+
+
+## 雲端版 v0.8 同步進度（尚未部署）
+
+已將離線版的**任務分類、搜尋、狀態篩選與六階段進度顯示**移植到 Cloudflare Workers + D1 的開發程式中。新分類欄位透過 `0005_task_category.sql` 遷移，既有任務預設「一般」。雲端版繼續保留伺服器端 Word 擷取、Markdown 匯出與人工核定；**離線 JSON 尚不能直接匯入 D1**。Cloudflare 金鑰設定仍未完成，不啟動部署。
+
+## 雲端部署暫停，不影響開發
+
+Cloudflare 部署及三項授權／D1 預檢均改為**手動觸發**，不會因開發分支 push 自動執行。登入金鑰或 D1 部署問題暫不處理，先以已測試的 `offline/index.html` 作為可用版本。`main` 保持原樣，正式站尚未上線。
+
+## v0.9：離線 JSON 備份轉換預覽（不連雲端）
+
+已加入 [離線備份轉 D1 資料規格](docs/離線備份轉D1資料規格.md) 和純本機的 `tools/convert-offline-backup.mjs`。
+
+只檢查離線 JSON 結構與預計轉換筆數、不寫檔：
+
+```bash
+node tools/convert-offline-backup.mjs "你的離線備份.json"
+```
+
+明確使用 `--output private-imports/計畫.json` 才輸出含完整私人文字的匯入計畫。新增 Node 與 SQLite 模擬匯入、重複匯入回滾測試。**真正將資料寫入 Cloudflare D1 的功能仍未開放，也沒有啟動遠端部署或模型 API。**
+
+## 離線工作臺 v0.9：歷史回合與意見對照
+
+[開啟 v0.9 單檔 HTML](offline/index.html)｜[保留已驗收的 v0.8 原檔](offline/v0.8.html)｜[v0.9 使用說明](offline/v0.9-操作說明.md)
+
+v0.9 增加歷次回合切換、同一階段 ChatGPT／Gemini 雙欄並排對照、人工採納／退回理由及日期檢視。切換歷史為唯讀，不改變最新回合審查、原文及未送出的回覆。**JSON 備份仍採 v0.8 格式，不需搬遷**。離線版已完成 Chromium 的回合切換及備份還原測試；Cloudflare 仍未部署。
+
+## v1.0 純雲端版：背景自動審查原型（不接觸憑證）
+
+新增 [背景 Queue 工作設計](docs/v1.0-純雲端背景審查.md)：使用者按「開始」後，由 Cloudflare Queue 在背景逐階段協調 ChatGPT 與 Gemini，與瀏覽器是否開啟無關。新增 D1 migration 0006 作為重複派工保護；失敗後停止自動重試付費請求，保留原文、歷次意見與人工決定。
+
+**目前只是程式與無網路模擬測試：沒有建立 Queue，沒有真實登入 Cloudflare，沒有呼叫任何 AI API，沒有部署網站。** `BACKGROUND_JOBS_ENABLED=false`、`MODEL_API_ENABLED=false` 為預設。正式功能仍需私人 Access 政策、Cloudflare 授權、兩個模型的正式 API 授權及費用確認；依使用者指示，至此停止任何真實授權操作。

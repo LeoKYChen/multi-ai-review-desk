@@ -1,0 +1,15 @@
+{
+  "name": "multi-ai-review-desk-cloudflare",
+  "version": "0.8.0-dev.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 migrations apply multi-ai-review-desk-db --local",
+    "db:remote": "wrangler d1 migrations apply multi-ai-review-desk-db --remote",
+    "backup:remote": "node scripts/backup.mjs"
+  },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

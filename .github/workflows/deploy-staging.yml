@@ -1,0 +1,167 @@
+name: Deploy Cloudflare staging (two-step, opt-in)
+on:
+  workflow_call:
+    inputs:
+      stage:
+        description: "Provision closed first; activate only after Access is verified"
+        type: string
+        required: true
+      confirm:
+        description: "Must equal deploy-private-staging"
+        type: string
+        required: true
+      source_sha:
+        description: "Pinned source commit SHA from the default-branch caller"
+        type: string
+        required: true
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      OWNER_TOKEN:
+        required: true
+      OWNER_PASSWORD:
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: multi-ai-review-desk-staging
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: "${{ github.repository == 'LeoKYChen/multi-ai-review-desk' && github.ref == 'refs/heads/main' && (inputs.stage == 'provision_closed' || inputs.stage == 'activate_after_access') && inputs.confirm == 'deploy-private-staging' && vars.ENABLE_STAGING_DEPLOY == 'true' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: cloudflare-staging
+    env:
+      CLOUDFLARE_ACCOUNT_ID: "${{ vars.CLOUDFLARE_ACCOUNT_ID }}"
+      CF_STAGING_D1_DATABASE_ID: "${{ vars.CF_STAGING_D1_DATABASE_ID }}"
+      CF_D1_DATABASE_ID: "${{ vars.CF_D1_DATABASE_ID }}"
+      STAGING_NETWORK_MODE: "${{ inputs.stage == 'provision_closed' && 'closed' || 'access-protected' }}"
+      STAGING_ACCESS_CONFIRMED: "${{ vars.ACCESS_POLICY_VERIFIED }}"
+      STAGING_ACCESS_URL: "${{ vars.STAGING_ACCESS_URL }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Do not check out main; use exactly the commit reviewed in the manual launcher.
+          ref: "${{ inputs.source_sha }}"
+          persist-credentials: false
+      - name: Verify pinned checkout and supported launch event
+        shell: bash
+        env:
+          PINNED_SHA: "${{ inputs.source_sha }}"
+        run: |
+          set -euo pipefail
+          [[ "$PINNED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Deployment commit must be a full SHA"; exit 1; }
+          test "$(git rev-parse HEAD)" = "$PINNED_SHA" || { echo "::error::Checkout differs from the pinned source SHA"; exit 1; }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Preflight in fail-closed staging mode
+        env:
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          OWNER_TOKEN: "${{ secrets.OWNER_TOKEN }}"
+          OWNER_PASSWORD: "${{ secrets.OWNER_PASSWORD }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing Cloudflare deployment token (GitHub secret)"; exit 1; }
+          test -n "$OWNER_TOKEN" && test "${#OWNER_TOKEN}" -ge 32 || { echo "::error::Invalid owner session secret"; exit 1; }
+          test -n "$OWNER_PASSWORD" && test "${#OWNER_PASSWORD}" -ge 16 || { echo "::error::Invalid owner password secret"; exit 1; }
+          if [ "$STAGING_NETWORK_MODE" = "access-protected" ]; then
+            test "$STAGING_ACCESS_CONFIRMED" = "true" || { echo "::error::Cloudflare Worker-level Access All traffic has not been confirmed"; exit 1; }
+            [[ "$STAGING_ACCESS_URL" =~ ^https://multi-ai-review-desk-staging\.[a-z0-9-]+\.workers\.dev/?$ ]] || { echo "::error::Set an exact staging workers.dev URL"; exit 1; }
+          fi
+      - name: Install Wrangler and test
+        working-directory: cloudflare
+        run: npm install --no-fund --no-audit
+      - name: Validate local tests including D1 backup/restore
+        run: |
+          cd cloudflare
+          npm test
+          python3 test/check_schema.py
+          python3 test/check_schema_v1.py
+          python3 test/check_backup_restore_v1.py
+      - name: Generate disposable Wrangler config
+        working-directory: cloudflare
+        run: node scripts/prepare-staging.mjs
+      - name: Assert no paid API and no Worker preview address
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qx 'preview_urls = false' cloudflare/wrangler.toml
+          grep -qx 'MODEL_API_ENABLED = "false"' cloudflare/wrangler.toml
+          grep -qx 'BACKGROUND_JOBS_ENABLED = "false"' cloudflare/wrangler.toml
+          grep -qx 'database_name = "multi-ai-review-desk-staging-db"' cloudflare/wrangler.toml
+          if [ "$STAGING_NETWORK_MODE" = "closed" ]; then
+            grep -qx 'workers_dev = false' cloudflare/wrangler.toml
+          else
+            grep -qx 'workers_dev = true' cloudflare/wrangler.toml
+          fi
+      - name: Verify target is a separately named D1 database
+        if: "${{ inputs.stage == 'provision_closed' }}"
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler d1 list --json > "$RUNNER_TEMP/staging-d1-list.json"
+          node scripts/verify-staging-db.mjs "$RUNNER_TEMP/staging-d1-list.json"
+      - name: Preview and apply migrations ONLY to verified staging D1
+        if: "${{ inputs.stage == 'provision_closed' }}"
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        run: |
+          npx wrangler d1 migrations list DB --remote
+          npx wrangler d1 migrations apply DB --remote
+      - name: Deploy Worker with chosen network state
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        run: npx wrangler deploy
+      - name: Set owner auth secrets for closed, not publicly routable Worker
+        if: "${{ inputs.stage == 'provision_closed' }}"
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          OWNER_TOKEN: "${{ secrets.OWNER_TOKEN }}"
+          OWNER_PASSWORD: "${{ secrets.OWNER_PASSWORD }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$OWNER_TOKEN" | npx wrangler secret put OWNER_TOKEN
+          printf '%s' "$OWNER_PASSWORD" | npx wrangler secret put OWNER_PASSWORD
+      - name: Fail closed if unauthenticated visitor can read staging
+        if: "${{ inputs.stage == 'activate_after_access' }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --max-time 20 -D "$RUNNER_TEMP/staging-response-headers" -o /dev/null "$STAGING_ACCESS_URL"
+          status="$(head -n 1 "$RUNNER_TEMP/staging-response-headers" | tr -d '\r' | awk '{print $2}')"
+          if [ "$status" = "302" ]; then
+            grep -iq '^location: https://[^ /]*\.cloudflareaccess\.com/' "$RUNNER_TEMP/staging-response-headers" || { echo "::error::Redirect was not a Cloudflare Access challenge"; exit 1; }
+          elif [ "$status" != "401" ] && [ "$status" != "403" ]; then
+            echo "::error::Unauthenticated staging request was not denied. Reverting workers.dev."
+            exit 1
+          fi
+          echo "PASS: anonymous access did not reach the application."
+      - name: Roll back public URL if any activation step fails
+        if: "${{ failure() && inputs.stage == 'activate_after_access' }}"
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        run: |
+          set -euo pipefail
+          rm -f cloudflare/wrangler.toml
+          export STAGING_NETWORK_MODE=closed
+          node cloudflare/scripts/prepare-staging.mjs
+          grep -qx 'workers_dev = false' cloudflare/wrangler.toml
+          cd cloudflare
+          npx wrangler deploy
+      - name: Deployment notes
+        if: "${{ success() }}"
+        run: |
+          echo "Staging step completed: $STAGING_NETWORK_MODE"
+          echo "Both paid model flags stay OFF. No real OpenAI/Gemini requests."
+          echo "Use test-only texts. Do not upload confidential juvenile cases."

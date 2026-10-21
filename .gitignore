@@ -1,0 +1,17 @@
+node_modules/
+data/
+.env
+*.tmp
+providers.local.json
+.wrangler/
+cloudflare/.wrangler/
+cloudflare/node_modules/
+**/.env.*
+cloudflare/wrangler.toml
+
+private-backups/
+**/private-backups/
+
+# Offline v0.8 backups and plaintext import plans must never be committed.
+private-imports/
+**/private-imports/

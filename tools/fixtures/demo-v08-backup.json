@@ -1,0 +1,107 @@
+{
+  "version": 8,
+  "format": "multi-ai-offline-v0.8",
+  "exportedAt": "2026-10-20T02:05:00.000Z",
+  "selectedId": "local-fallback-001",
+  "tasks": [
+    {
+      "id": "local-fallback-001",
+      "title": "O'Brien 文件審查",
+      "category": "文件審查",
+      "instruction": "審查：第二段的 '理由' 是否清楚；注意不自行核定。",
+      "documentText": "第1段：原文。\n第2段：含 '引用'。",
+      "documentName": "範例.docx",
+      "createdAt": "2026-10-20T01:00:00.000Z",
+      "updatedAt": "2026-10-20T02:04:00.000Z",
+      "status": "running",
+      "rounds": [
+        {
+          "ordinal": 1,
+          "startedAt": "2026-10-20T01:05:00.000Z",
+          "outputs": [
+            {
+              "phase": "independent",
+              "provider": "chatgpt",
+              "body": "初稿 A",
+              "source": "manual_unverified",
+              "createdAt": "2026-10-20T01:06:00.000Z"
+            },
+            {
+              "phase": "independent",
+              "provider": "gemini",
+              "body": "初稿 B",
+              "source": "manual_unverified",
+              "createdAt": "2026-10-20T01:07:00.000Z"
+            },
+            {
+              "phase": "critique",
+              "provider": "chatgpt",
+              "body": "交叉意見 A",
+              "source": "manual_unverified",
+              "createdAt": "2026-10-20T01:08:00.000Z"
+            },
+            {
+              "phase": "critique",
+              "provider": "gemini",
+              "body": "交叉意見 B",
+              "source": "manual_unverified",
+              "createdAt": "2026-10-20T01:09:00.000Z"
+            },
+            {
+              "phase": "proposal",
+              "provider": "chatgpt",
+              "body": "最終建議 A",
+              "source": "manual_unverified",
+              "createdAt": "2026-10-20T01:10:00.000Z"
+            },
+            {
+              "phase": "proposal",
+              "provider": "gemini",
+              "body": "最終建議 B",
+              "source": "manual_unverified",
+              "createdAt": "2026-10-20T01:11:00.000Z"
+            }
+          ],
+          "review": {
+            "decision": "rework",
+            "note": "請補強第二段 '必要性'。",
+            "createdAt": "2026-10-20T01:12:00.000Z"
+          }
+        },
+        {
+          "ordinal": 2,
+          "startedAt": "2026-10-20T02:00:00.000Z",
+          "outputs": [
+            {
+              "phase": "independent",
+              "provider": "chatgpt",
+              "body": "重議初稿 A",
+              "source": "manual_unverified",
+              "createdAt": "2026-10-20T02:01:00.000Z"
+            },
+            {
+              "phase": "independent",
+              "provider": "gemini",
+              "body": "重議初稿 B",
+              "source": "manual_unverified",
+              "createdAt": "2026-10-20T02:02:00.000Z"
+            }
+          ],
+          "review": null
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "title": "空白示範任務",
+      "category": "一般",
+      "instruction": "供測試使用",
+      "documentText": "",
+      "documentName": "",
+      "createdAt": "2026-10-20T01:00:00.000Z",
+      "updatedAt": "2026-10-20T01:00:00.000Z",
+      "status": "new",
+      "rounds": []
+    }
+  ]
+}

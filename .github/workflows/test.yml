@@ -1,0 +1,33 @@
+name: Validate D1-only backend
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Word parser and Worker API unit tests
+        run: cd cloudflare && npm test
+      - name: Offline v0.8 self-contained HTML regression checks
+        run: node --test offline/test/*.test.mjs
+      - name: Offline v0.8 to D1 conversion unit tests
+        run: node --test tools/test/*.test.mjs
+      - name: Offline backup migration SQLite dry-run (no Cloudflare access)
+        run: python3 tools/test/sqlite-dry-run.py
+      - name: Browser JavaScript module syntax
+        run: |
+          node --check cloudflare/public/app.js
+          node --check cloudflare/public/review-ui.js
+          node --check cloudflare/public/draft-cache.js
+      - name: D1 schema and source immutability
+        run: python3 cloudflare/test/check_schema.py
+      - name: D1 v1 Phase 1 migrations and historical data validation
+        run: python3 cloudflare/test/check_schema_v1.py
+      - name: Phase 6 D1 backup restore and immutable history
+        run: python3 cloudflare/test/check_backup_restore_v1.py

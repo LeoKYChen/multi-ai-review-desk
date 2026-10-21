@@ -1,0 +1,46 @@
+name = "multi-ai-review-desk"
+main = "src/worker.mjs"
+compatibility_date = "2026-10-20"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "multi-ai-review-desk-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# Secrets are never committed to GitHub:
+# npx wrangler secret put OWNER_TOKEN
+# npx wrangler secret put OWNER_PASSWORD
+# npx wrangler secret put OPENAI_API_KEY
+# npx wrangler secret put GEMINI_API_KEY
+# OPENAI_MODEL and GEMINI_MODEL must be configured separately; model names are not assumed.
+
+# Paid model requests are disabled unless explicitly enabled.
+# MODEL_API_ENABLED = "false"
+# MODEL_MAX_CALLS_PER_TASK = "12"
+# MODEL_MAX_CALLS_PER_DAY = "12"
+
+# v1.0 background AI review is disabled by default.
+# Queue bindings must be configured and provisioned only after Access + API authorization.
+# BACKGROUND_JOBS_ENABLED = "false"
+# [[queues.producers]]
+# queue = "multi-ai-review-desk-tasks"
+# binding = "AI_REVIEW_QUEUE"
+# [[queues.consumers]]
+# queue = "multi-ai-review-desk-tasks"
+# max_batch_size = 1
+# max_retries = 1
+
+# Phase 2 durable outbox recovery is NOT enabled until explicitly authorized.
+# For unattended reconciliation only after private Access and real Queue tests:
+# [triggers]
+# crons = ["*/5 * * * *"]
+# The scheduled handler performs safe control delivery / lease checks only;
+# it never retries a paid model call with an ambiguous prior outcome.

@@ -1,0 +1,55 @@
+name: Cloudflare read-only Account/D1 API preflight
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-check:
+    runs-on: ubuntu-latest
+    environment: cloudflare-staging
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CF_D1_DATABASE_ID: ${{ vars.CF_D1_DATABASE_ID }}
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Validate access to specified D1 with a read-only GET request
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$CLOUDFLARE_ACCOUNT_ID" =~ ^[0-9a-fA-F]{32}$ ]]; then
+            echo "SKIP: Cloudflare Account ID is invalid"
+            exit 1
+          fi
+          if [[ ! "$CF_D1_DATABASE_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+            echo "SKIP: D1 Database ID is invalid"
+            exit 1
+          fi
+          if [[ -z "$CF_API_TOKEN" ]]; then
+            echo "FAIL: Cloudflare API token secret missing"
+            exit 1
+          fi
+          response="$(mktemp)"
+          trap 'rm -f "$response"' EXIT
+          code="$(curl --silent --show-error --max-time 25 --request GET \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H 'Accept: application/json' \
+            -o "$response" -w '%{http_code}' \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$CF_D1_DATABASE_ID")"
+          if [[ "$code" != '200' ]]; then
+            echo "FAIL: Cloudflare D1 read-only check returned HTTP $code"
+            exit 1
+          fi
+          python3 - "$response" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as stream:
+              data=json.load(stream)
+          if data.get("success") is not True or not isinstance(data.get("result"),dict):
+              print("FAIL: Cloudflare D1 response is not successful")
+              sys.exit(1)
+          if data["result"].get("name") != "multi-ai-review-desk-db":
+              print("FAIL: D1 name does not match the expected project database")
+              sys.exit(1)
+          print("PASS: Cloudflare Account, D1 UUID, database name and token GET permission")
+          print("No database rows, credentials or document contents were accessed.")
+          PY
