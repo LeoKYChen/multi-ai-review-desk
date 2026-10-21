@@ -192,6 +192,12 @@ export function initReviewUi({api,$,showAlert,getActiveTask,reload}){
   const result=await api('/tasks/'+task.id+'/recovery');
   if(state.taskId!==task.id)return;
   state.recovery=result;
+  if(['paused_failure','paused_parse'].includes(result.status)){
+   el('run-hint').textContent=result.status==='paused_parse'?
+    '雙 AI 交叉意見已保留，尚需由你確認異議整理，才能進行下一階段。':
+    '背景工作因模型失敗而暫停。已完成成果已保留，請查看下方執行紀錄及重試風險。';
+   el('run').disabled=true;
+  }
   el('recovery-summary').textContent='工作狀態：'+result.status+
    (result.reason_code?'｜原因：'+result.reason_code:'')+
    (result.risk_warning?'｜'+result.risk_warning:'');
