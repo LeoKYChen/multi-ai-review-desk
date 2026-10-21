@@ -10,7 +10,9 @@ test('Cloudflare 前端頁面提供歷史回合與 AI 階段切換控制',()=>{
  }
 });
 test('回合切換控制僅重繪歷史，未觸發提交或修改原始內容',()=>{
- assert.doesNotThrow(()=>new vm.Script(app));
+ // app.js is now an ES module; vm.Script does not accept static import syntax.
+ // Node --check in CI validates the full module, while this checks remaining UI code.
+ assert.doesNotThrow(()=>new vm.Script(app.replace(/^import\\s+.*;\\n/gm,'')));
  assert.match(app,/function showRoundHistory\(task\)/);
  const start=app.indexOf("$('round-picker').addEventListener");
  const ending=app.indexOf("$('latest-round').addEventListener",start);
