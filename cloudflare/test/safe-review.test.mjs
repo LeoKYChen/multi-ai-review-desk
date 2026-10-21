@@ -162,3 +162,73 @@ test('重複控制訊息不得重跑已保存的 ChatGPT 階段',async()=>{
  assert.equal(calls,2);
  assert.equal(x.sql.prepare("SELECT COUNT(*) n FROM ai_outputs WHERE provider='chatgpt' AND phase='independent'").get().n,1);
 });
+
+
+test('併發 Queue 重送不會暫停仍在執行的合法模型請求',async()=>{
+ const x=fixture();await startSafeReview(x.env,x.id);
+ const original=x.shift();
+ let finish,started=0;
+ const pending=new Promise(resolve=>{finish=resolve;});
+ const first=consumeSafeMessage(x.msg(original),x.env,{
+  ...x.deps,callModel:async()=>{started++;return pending;}
+ });
+ // Wait only for the local fake D1 attempt to enter request_started.
+ let row;
+ for(let i=0;i<100;i++){
+  row=x.sql.prepare('SELECT state FROM review_model_attempts LIMIT 1').get();
+  if(row?.state==='request_started')break;
+  await new Promise(resolve=>setImmediate(resolve));
+ }
+ assert.equal(row?.state,'request_started');
+ const duplicate=await consumeSafeMessage(x.msg(original),x.env,{
+  ...x.deps,callModel:async()=>{throw Error('duplicate must not call a provider');}
+ });
+ assert.equal(duplicate.outcome,'concurrent');
+ assert.equal(x.sql.prepare('SELECT state FROM review_jobs').get().state,'running');
+ finish('Original model reply');
+ assert.equal((await first).outcome,'queued');
+ assert.equal(started,1);
+ assert.equal(x.sql.prepare('SELECT COUNT(*) n FROM ai_outputs').get().n,1);
+});
+
+test('失去控制訊息而租約過期，只有已持久化的工作可自動安全恢復',async()=>{
+ const x=fixture();await startSafeReview(x.env,x.id);
+ await consumeSafeMessage(x.msg(x.shift()),x.env,{
+  ...x.deps,callModel:async()=> 'committed result'
+ });
+ // Simulate a lost control message after one output was durably stored.
+ x.sent.length=0;
+ x.sql.prepare("UPDATE review_jobs SET state='running',lease_until=1 WHERE task_id=?").run(x.id);
+ const rec=await reconcileSafe(x.env);
+ assert.equal(rec.safe_resumed,1);
+ assert.equal(rec.stale_paused,0);
+ assert.equal(x.sql.prepare('SELECT state FROM review_jobs').get().state,'queued');
+ assert.equal(x.sql.prepare('SELECT COUNT(*) n FROM ai_outputs').get().n,1);
+ assert.ok(x.sent.length>0);
+});
+
+test('租約過期且付費結果未明，只能暫停不得安全續跑',async()=>{
+ const x=fixture();await startSafeReview(x.env,x.id);
+ await consumeSafeMessage(x.msg(x.shift()),x.env,{
+  ...x.deps,callModel:async()=>{throw Error('provider possibly charged');}
+ });
+ x.sql.prepare("UPDATE review_jobs SET state='running',lease_until=1 WHERE task_id=?").run(x.id);
+ const rec=await reconcileSafe(x.env);
+ assert.equal(rec.safe_resumed,0);
+ assert.equal(rec.stale_paused,1);
+ assert.equal((await recoveryState(x.env,x.id)).status,'paused_failure');
+ assert.equal(x.sent.length,0);
+});
+
+test('Idempotency-Key 不能用不同人工理由替換已確認重試',async()=>{
+ const x=fixture();await startSafeReview(x.env,x.id);
+ await consumeSafeMessage(x.msg(x.shift()),x.env,{
+  ...x.deps,callModel:async()=>{throw Error('provider timeout');}
+ });
+ const s=await recoveryState(x.env,x.id);
+ const payload={job_id:s.job_id,expected_job_revision:s.job_revision,provider:'chatgpt',
+  phase:'independent',acknowledge_possible_charge:true,reason:'原先確認的理由'};
+ await authorizeRetry(x.env,x.id,payload,'retry-reason-unique');
+ await assert.rejects(()=>authorizeRetry(x.env,x.id,{...payload,reason:'不同理由'},'retry-reason-unique'),
+  /請求的內容不一致/);
+});
