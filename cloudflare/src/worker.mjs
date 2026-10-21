@@ -6,7 +6,8 @@ import { beginManual, getManualNext, submitManual } from './manual.mjs';
 import { guardedLogin, apiEnabled, modelCallCaps } from './guardrails.mjs';
 import { renderTaskMarkdown } from './export.mjs';
 import {parseTaskFilters,buildTaskListQuery} from './task-query.mjs';
-import { safeEnabled, startSafeReview, recoveryState, authorizeRetry, consumeSafeMessage, reconcileSafe } from './safe-review.mjs';
+import { safeEnabled, startSafeReview, recoveryState, authorizeRetry, consumeSafeMessage, reconcileSafe, resumeParsedReview } from './safe-review.mjs';
+import {getObjections,createHumanObjection,correctObjection,resolveCritique,listSources,createSource,updateSource} from './review-evidence.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -24,7 +25,7 @@ async function body(req){
 }
 async function task(env,id){const value=await env.DB.prepare('SELECT * FROM tasks WHERE id=?').bind(id).first();assert(value,404,'找不到任務');return value;}
 async function roundFor(env,id){return env.DB.prepare('SELECT * FROM task_rounds WHERE task_id=? ORDER BY ordinal DESC LIMIT 1').bind(id).first();}
-async function recordsFor(env,roundId){return (await env.DB.prepare('SELECT provider,phase,body,created_at,source FROM ai_outputs WHERE round_id=? ORDER BY created_at').bind(roundId).all()).results;}
+async function recordsFor(env,roundId){return (await env.DB.prepare('SELECT id,provider,phase,body,created_at,source FROM ai_outputs WHERE round_id=? ORDER BY created_at').bind(roundId).all()).results;}
 async function createTask(req,env){
  assert(req.headers.get('Content-Type')?.startsWith('multipart/form-data'),415,'請使用 multipart/form-data');
  assert(Number(req.headers.get('Content-Length')||0)<MAX_DOCX_BYTES+100000,413,'附件過大');
@@ -99,6 +100,36 @@ export default {async fetch(req,env){
    if(action==='next'&&req.method==='GET')return respond(await getManualNext(env,id));
    if(action==='output'&&req.method==='POST')return respond(await submitManual(env,id,await body(req)),201);
   }
+  // Phase 3: immutable AI critique with owner-curated objections and citations.
+  const objectionRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/objections$/);
+  if(objectionRoute){
+   const id=objectionRoute[1];
+   if(req.method==='GET'){
+    const requested=new URL(req.url).searchParams.get('round_id');
+    const roundId=requested||(await roundFor(env,id))?.id;
+    if(!roundId)fail(404,'找不到任務審查回合');
+    return respond(await getObjections(env,id,roundId));
+   }
+   if(req.method==='POST')return respond(await createHumanObjection(env,id,await body(req)),201);
+  }
+  const correctRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/objections\/([a-f0-9-]{36})$/);
+  if(correctRoute&&req.method==='PATCH')
+   return respond(await correctObjection(env,correctRoute[1],correctRoute[2],await body(req)));
+  const resolveRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/objections\/resolve-parse$/);
+  if(resolveRoute&&req.method==='POST'){
+   const input=await body(req);
+   const result=await resolveCritique(env,resolveRoute[1],input.round_id,input.ai_output_id);
+   const resumed=await resumeParsedReview(env,resolveRoute[1],input.round_id);
+   return respond({...result,workflow:resumed});
+  }
+  const sourcesRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/source-checks$/);
+  if(sourcesRoute){
+   if(req.method==='GET')return respond(await listSources(env,sourcesRoute[1]));
+   if(req.method==='POST')return respond(await createSource(env,sourcesRoute[1],await body(req)),201);
+  }
+  const sourceRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/source-checks\/([a-f0-9-]{36})$/);
+  if(sourceRoute&&req.method==='PATCH')
+   return respond(await updateSource(env,sourceRoute[1],sourceRoute[2],await body(req)));
   // Phase 2 safety: authenticated inspection and explicit fee-risk authorization.
   const recoveryRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/recovery$/);
   if(recoveryRoute&&req.method==='GET')return respond(await recoveryState(env,recoveryRoute[1]));
