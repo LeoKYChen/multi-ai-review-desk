@@ -37,3 +37,10 @@ migrations_dir = "migrations"
 # queue = "multi-ai-review-desk-tasks"
 # max_batch_size = 1
 # max_retries = 1
+
+# Phase 2 durable outbox recovery is NOT enabled until explicitly authorized.
+# For unattended reconciliation only after private Access and real Queue tests:
+# [triggers]
+# crons = ["*/5 * * * *"]
+# The scheduled handler performs safe control delivery / lease checks only;
+# it never retries a paid model call with an ambiguous prior outcome.
