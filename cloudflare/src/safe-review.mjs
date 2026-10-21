@@ -110,8 +110,9 @@ export async function authorizeRetry(env,taskId,input,key){
  if(!job||job.task_id!==taskId)throw fail(404,'找不到背景工作');
  const existing=await one(db,'SELECT * FROM retry_authorizations WHERE idempotency_key=?',key);
  if(existing){
-  if(existing.job_id!==job.id||existing.provider!==input.provider||existing.phase!==input.phase)
-   throw fail(409,'同一請求識別不可用於其他工作');
+  if(existing.job_id!==job.id||existing.provider!==input.provider||
+     existing.phase!==input.phase||existing.reason!==input.reason.trim())
+   throw fail(409,'Idempotency-Key 與已授權請求的內容不一致');
   return {queued:true,duplicate:true,job_id:job.id};
  }
  if(job.state!=='paused_failure'||job.phase!==input.phase||job.revision!==input.expected_job_revision)
@@ -210,8 +211,26 @@ export async function consumeSafeMessage(message,env,deps={}){
 }
 export async function reconcileSafe(env){
  requireSafeReady(env);
- const now=Math.floor(Date.now()/1000);
- const stale=await many(env.DB,"SELECT id FROM review_jobs WHERE state='running' AND lease_until>0 AND lease_until<? LIMIT 25",now);
- for(const x of stale)await pause(env.DB,x.id,'LEASE_EXPIRED_NEEDS_HUMAN');
- return {...await dispatch(env),stale_paused:stale.length};
+ const db=env.DB,now=Math.floor(Date.now()/1000);
+ const stale=await many(db,"SELECT id,round_id,phase,revision FROM review_jobs WHERE state='running' AND lease_until>0 AND lease_until<? LIMIT 25",now);
+ let safeResumed=0,stalePaused=0;
+ for(const x of stale){
+  // If no provider call is in flight, a lost control message can safely be
+  // recreated. Persisted responses are immutable and won't be paid twice.
+  const attempts=await many(db,'SELECT state FROM review_model_attempts WHERE job_id=? AND phase=?',x.id,x.phase);
+  if(attempts.every(a=>a.state==='persisted')){
+   const stamp=iso(),outboxId=uuid();
+   const results=await db.batch([
+    db.prepare("UPDATE review_jobs SET state='queued',lease_until=0,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND state='running' AND lease_until<?")
+     .bind(stamp,x.id,x.revision,now),
+    db.prepare("INSERT INTO queue_outbox(id,job_id,action,state,created_at,updated_at) SELECT ?,?,'continue','pending',?,? WHERE EXISTS(SELECT 1 FROM review_jobs WHERE id=? AND revision=? AND state='queued')")
+     .bind(outboxId,x.id,stamp,stamp,x.id,x.revision+1)
+   ]);
+   if((results[0].meta?.changes??0)===1)safeResumed++;
+  }else{
+   await pause(db,x.id,'LEASE_EXPIRED_POSSIBLY_CHARGED');
+   stalePaused++;
+  }
+ }
+ return {...await dispatch(env),safe_resumed:safeResumed,stale_paused:stalePaused};
 }
