@@ -5,7 +5,7 @@ import {draftPayload,readCachedDraft,writeCachedDraft,clearCachedDraft,clearCach
 
 export function initReviewUi({api,$,showAlert,getActiveTask,reload}){
  const state={taskId:null,roundId:null,serverRevision:0,baseFinalId:null,localEdit:null,
-  inflight:false,conflict:null,timer:null,sourceItems:[],objectionItems:[],finalItems:[],recovery:null,approval:null};
+  inflight:false,conflict:null,timer:null,cacheQueue:Promise.resolve(),sourceItems:[],objectionItems:[],finalItems:[],recovery:null,approval:null};
  const el=id=>$(id);
  const draft=()=>el('human-draft');
  function info(message){el('draft-state').textContent=message;}
@@ -22,8 +22,13 @@ export function initReviewUi({api,$,showAlert,getActiveTask,reload}){
   if(!state.taskId)return;
   const current=draftPayload(state.taskId,draft().value,state.serverRevision);
   state.localEdit=current;info('本機暫存中，尚未同步雲端');
-  try{await writeCachedDraft(current);info('本機已暫存，尚未同步雲端');}
-  catch(e){info('本機暫存失敗，請自行備份文字');showAlert(e.message,true);}
+  // Serialize rapid keystrokes so an older async IndexedDB write can never
+  // finish after (and overwrite) a newer unsynced version.
+  state.cacheQueue=state.cacheQueue.catch(()=>{}).then(()=>writeCachedDraft(current));
+  try{await state.cacheQueue;
+   if(state.taskId===current.task_id&&state.localEdit?.local_edit_id===current.local_edit_id)
+    info('本機已暫存，尚未同步雲端');
+  }catch(e){info('本機暫存失敗，請自行備份文字');showAlert(e.message,true);}
  }
  function scheduleSave(){
   clearTimeout(state.timer);
@@ -39,6 +44,8 @@ export function initReviewUi({api,$,showAlert,getActiveTask,reload}){
  async function syncDraft(){
   if(!state.taskId||state.inflight||state.conflict||!state.localEdit)return;
   if(typeof navigator!=='undefined'&&!navigator.onLine){info('目前離線：僅本機暫存');return;}
+  await state.cacheQueue.catch(()=>{});
+  if(!state.taskId||!state.localEdit||state.conflict)return;
   const edit=state.localEdit,taskId=state.taskId;state.inflight=true;info('正在同步雲端草稿');
   try{
    const r=await api('/tasks/'+taskId+'/draft',{method:'PUT',body:{
@@ -50,7 +57,8 @@ export function initReviewUi({api,$,showAlert,getActiveTask,reload}){
     await clearCachedDraftIf(edit);state.localEdit=null;info('雲端已保存（版本 '+r.revision+'）');
    }else if(state.localEdit){
     const newer={...state.localEdit,base_revision:r.revision};
-    state.localEdit=newer;await writeCachedDraft(newer);info('部分變更已同步，仍有新的本機修改');
+    state.localEdit=newer;state.cacheQueue=state.cacheQueue.catch(()=>{}).then(()=>writeCachedDraft(newer));
+    await state.cacheQueue;info('部分變更已同步，仍有新的本機修改');
    }
   }catch(e){
    if(state.taskId!==taskId)return;
