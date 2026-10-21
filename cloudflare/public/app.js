@@ -16,11 +16,11 @@ async function api(path,{method='GET',body,headers:extraHeaders={}}={}){
 const reviewUi=initReviewUi({api,$,showAlert,getActiveTask:()=>activeTask,
  reload:async id=>{await loadTask(id);await loadList();}});
 function setAuth(authorized){$('login').classList.toggle('hidden',authorized);$('workspace').classList.toggle('hidden',!authorized);$('signout').classList.toggle('hidden',!authorized);}
-async function refreshSettings(){const data=await api('/settings');modelsConfigured=data.models_configured;$('model-state').textContent=modelsConfigured?'雙 AI API 已設定':'雙 AI API 尚未設定';$('model-state').classList.toggle('ok',modelsConfigured);$('model-state').classList.toggle('warning',!modelsConfigured);updateRun();}
+async function refreshSettings(){const data=await api('/settings');modelsConfigured=!!data.background_available;$('model-state').textContent=modelsConfigured?'雙 AI 背景審查已就緒':'雙 AI 背景尚未啟用';$('model-state').classList.toggle('ok',modelsConfigured);$('model-state').classList.toggle('warning',!modelsConfigured);updateRun();}
 function updateRun(){
  const el=$('run');const apiMode=activeTask?.mode!=='manual';
  el.classList.toggle('hidden',!apiMode);
- el.disabled=working||!activeTask||!modelsConfigured||activeTask.queue_requested===1||!['new','running','needs_rework','failed'].includes(activeTask.status);
+ el.disabled=working||!activeTask||!modelsConfigured||activeTask.queue_requested===1||!['new','needs_rework','failed'].includes(activeTask.status);
 }
 function cell(text,cls){const el=document.createElement('div');if(cls)el.className=cls;el.textContent=text;return el;}
 function phaseNode(name,text){const root=cell('','phase');const strong=document.createElement('strong');strong.textContent=phaseLabel[name];root.append(strong,cell(text||'尚未執行'));return root;}
