@@ -55,6 +55,17 @@ async function readFullTask(env,id){
  for(const r of rounds){const outputs=await recordsFor(env,r.id);const review=await env.DB.prepare('SELECT decision,note,created_at FROM human_decisions WHERE round_id=?').bind(r.id).first();result.push({...r,outputs,review});}
  return {...t,rounds:result};
 }
+async function readExportTask(env,id){
+ const content=await readFullTask(env,id);
+ const [finals,objections,events,sources]=await Promise.all([
+  env.DB.prepare('SELECT * FROM final_versions WHERE task_id=? ORDER BY version_no').bind(id).all(),
+  env.DB.prepare('SELECT o.* FROM review_objections o JOIN task_rounds r ON r.id=o.round_id WHERE r.task_id=? ORDER BY o.created_at').bind(id).all(),
+  env.DB.prepare('SELECT e.* FROM objection_events e JOIN review_objections o ON o.id=e.objection_id JOIN task_rounds r ON r.id=o.round_id WHERE r.task_id=? ORDER BY e.created_at').bind(id).all(),
+  env.DB.prepare('SELECT * FROM source_checks WHERE task_id=? ORDER BY updated_at').bind(id).all()
+ ]);
+ return {...content,final_versions:finals.results,objections:objections.results,
+  objection_events:events.results,current_sources:sources.results};
+}
 async function detail(env,id){return respond(await readFullTask(env,id));}
 async function humanReview(env,taskId,req){
  const input=await body(req);
@@ -94,7 +105,7 @@ export default {async fetch(req,env){
   }
   const exportRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/export\.md$/);
   if(exportRoute&&req.method==='GET'){
-   const content=renderTaskMarkdown(await readFullTask(env,exportRoute[1]));
+   const content=renderTaskMarkdown(await readExportTask(env,exportRoute[1]));
    return new Response(content,{status:200,headers:{...jsonHeaders,'Content-Type':'text/markdown; charset=utf-8','Content-Disposition':`attachment; filename="multi-ai-task-${exportRoute[1]}.md"`}});
   }
   const manualRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/manual-(begin|next|output)$/);
