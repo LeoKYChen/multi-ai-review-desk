@@ -7,7 +7,7 @@ import { guardedLogin, apiEnabled, reserveModelCall, markModelCall, modelCallCap
 import { renderTaskMarkdown } from './export.mjs';
 import { getPreviousReworkNote } from './review-context.mjs';
 import {parseTaskFilters,buildTaskListQuery} from './task-query.mjs';
-import { backgroundSelected, enqueueReview, consumeReviewMessage } from './background-review.mjs';
+import { safeEnabled, startSafeReview, recoveryState, authorizeRetry, dispatchSafeOutbox, consumeSafeMessage, reconcileSafe } from './safe-review.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -169,13 +169,21 @@ export default {async fetch(req,env){
    if(action==='next'&&req.method==='GET')return respond(await getManualNext(env,id));
    if(action==='output'&&req.method==='POST')return respond(await submitManual(env,id,await body(req)),201);
   }
+  // Phase 2 safety: authenticated inspection and explicit fee-risk authorization.
+  const recoveryRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/recovery$/);
+  if(recoveryRoute&&req.method==='GET')return respond(await recoveryState(env,recoveryRoute[1]));
+  const retryRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/retry$/);
+  if(retryRoute&&req.method==='POST')return respond(await authorizeRetry(env,retryRoute[1],await body(req),req.headers.get('Idempotency-Key')),202);
+  if(pathname==='/api/jobs/reconcile'&&req.method==='POST')return respond(await reconcileSafe(env));
   const matched=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})(?:\/(advance|review))?$/);
   if(matched){
    const [,id,action]=matched;
    if(req.method==='GET'&&!action)return await detail(env,id);
    if(req.method==='POST'&&action==='advance'){
-    if(backgroundSelected(env))return respond(await enqueueReview(env,id,{ready,apiEnabled}),202);
-    return await advance(env,id,fetch);
+    // Fail closed: the old synchronous implementation does not maintain
+    // persisted paid-call outcome state. Phase 2 only permits safe Queue jobs.
+    if(!safeEnabled(env))fail(409,'自動 AI 執行必須明確啟用安全背景工作');
+    return respond(await startSafeReview(env,id),202);
    }
    if(req.method==='POST'&&action==='review')return await humanReview(env,id,req);
   }
@@ -186,8 +194,10 @@ export default {async fetch(req,env){
  }
 },
  async queue(batch,env){
-  for(const message of batch.messages){
-   await consumeReviewMessage(message,env,{advance:async(e,taskId)=>advance(e,taskId,fetch),ready,apiEnabled});
-  }
+  for(const message of batch.messages)await consumeSafeMessage(message,env);
+ },
+ async scheduled(_event,env){
+  // Requires separately configured Cron trigger; never deploys itself.
+  if(safeEnabled(env))await reconcileSafe(env);
  }
 };
