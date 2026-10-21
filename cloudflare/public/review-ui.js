@@ -5,7 +5,7 @@ import {draftPayload,readCachedDraft,writeCachedDraft,clearCachedDraft,clearCach
 
 export function initReviewUi({api,$,showAlert,getActiveTask,reload}){
  const state={taskId:null,roundId:null,serverRevision:0,baseFinalId:null,localEdit:null,
-  inflight:false,conflict:null,timer:null,cacheQueue:Promise.resolve(),sourceItems:[],objectionItems:[],finalItems:[],recovery:null,approval:null};
+  inflight:false,conflict:null,timer:null,editable:false,cacheQueue:Promise.resolve(),sourceItems:[],objectionItems:[],finalItems:[],recovery:null,approval:null};
  const el=id=>$(id);
  const draft=()=>el('human-draft');
  function info(message){el('draft-state').textContent=message;}
@@ -209,24 +209,28 @@ export function initReviewUi({api,$,showAlert,getActiveTask,reload}){
  }
  async function show(task){
   const newTask=state.taskId!==task.id;
+  const newestRound=task.rounds?.at(-1)?.id||null;
+  const newRound=state.roundId!==newestRound;
   if(newTask){
    clearTimeout(state.timer);
-   Object.assign(state,{taskId:task.id,roundId:task.rounds?.at(-1)?.id||null,
+   Object.assign(state,{taskId:task.id,roundId:newestRound,editable:false,
     localEdit:null,serverRevision:0,baseFinalId:null,conflict:null,approval:null});
    el('draft-conflict').classList.add('hidden');
    el('final-reader').classList.add('hidden');
-  }
+  }else if(newRound)state.roundId=newestRound;
   const canEdit=['awaiting_human','closed'].includes(task.status);
+  const enteredEditor=canEdit&&!state.editable;
+  state.editable=canEdit;
   el('finals-section').classList.toggle('hidden',!canEdit);
   el('final-approve-revision').classList.toggle('hidden',task.status!=='closed');
   el('objections-section').classList.toggle('hidden',!(task.rounds?.length));
   el('sources-section').classList.toggle('hidden',!task.rounds?.length&&!canEdit);
   el('recovery-section').classList.toggle('hidden',task.mode!=='api');
-  if(newTask){
+  if(newTask||enteredEditor){
    if(canEdit)await Promise.all([loadDraft(task.id),loadFinals(task.id)]);
-   if(state.roundId)await refreshObjections();
    if(!el('sources-section').classList.contains('hidden'))await refreshSources();
   }
+  if((newTask||newRound)&&state.roundId)await refreshObjections();
   if(task.mode==='api')await refreshRecovery();
  }
  async function approve(decision,note){
