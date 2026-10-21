@@ -20,3 +20,14 @@ test('Gemini generateContent API 模擬回應',async()=>{
 test('模型 API 錯誤不得輸出密鑰',async()=>{
  const fetcher=async()=>({ok:false,status:429});await assert.rejects(()=>callModel('gemini',env,'提示',fetcher),e=>!e.message.includes('gemini-test')&&/429/.test(e.message));
 });
+
+
+test('國考申論模板僅在明確選用時加入批改與來源核對規則',()=>{
+ const general=makePrompt({...task,template_key:'general'},'independent','chatgpt',rows);
+ const exam=makePrompt({...task,template_key:'exam_essay'},'independent','chatgpt',rows);
+ assert.doesNotMatch(general,/國家考試申論批改模板/);
+ assert.match(exam,/國家考試申論批改模板/);
+ assert.match(exam,/涵攝論證/);
+ assert.match(exam,/不得編造考題年份/);
+ assert.doesNotMatch(exam,/A 初稿|B 初稿/);
+});
