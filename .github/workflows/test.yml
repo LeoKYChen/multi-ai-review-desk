@@ -24,3 +24,5 @@ jobs:
         run: node --check cloudflare/public/app.js
       - name: D1 schema and source immutability
         run: python3 cloudflare/test/check_schema.py
+      - name: D1 v1 Phase 1 migrations and historical data validation
+        run: python3 cloudflare/test/check_schema_v1.py
