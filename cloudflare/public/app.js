@@ -1,3 +1,4 @@
+import {initReviewUi} from './review-ui.js';
 const $=id=>document.getElementById(id);
 let activeTask=null, activeManualStep=null, modelsConfigured=false, working=false;
 const roundView={taskId:null,ordinal:null,phase:'all'};
@@ -5,13 +6,15 @@ let listVersion=0,searchTimer=null,backgroundTimer=null;
 const statusLabel={new:'尚未開始',running:'AI 審查中',awaiting_human:'待你審查',needs_rework:'退回重議',closed:'已由你結案',failed:'執行失敗'};
 const phaseLabel={independent:'第一階段｜獨立分析',critique:'第二階段｜交叉審查',proposal:'第三階段｜個別修正建議'};
 function showAlert(message,error=false){const el=$('notice');el.textContent=String(message);el.classList.toggle('error',error);el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),6500);}
-async function api(path,{method='GET',body}={}){
- const headers={},options={method,credentials:'same-origin'};
+async function api(path,{method='GET',body,headers:extraHeaders={}}={}){
+ const headers={...extraHeaders},options={method,credentials:'same-origin'};
  if(body!==undefined){if(body instanceof FormData)options.body=body;else{headers['Content-Type']='application/json';options.body=JSON.stringify(body);}}
  options.headers=headers;const res=await fetch('/api'+path,options);let data;
  try{data=await res.json();}catch{throw new Error('伺服器回覆無法解析');}
- if(!res.ok)throw new Error(data.error||'請求失敗');return data;
+ if(!res.ok){const e=new Error(data.error||'請求失敗');e.status=res.status;e.code=data.code;e.details=data.details;throw e;}return data;
 }
+const reviewUi=initReviewUi({api,$,showAlert,getActiveTask:()=>activeTask,
+ reload:async id=>{await loadTask(id);await loadList();}});
 function setAuth(authorized){$('login').classList.toggle('hidden',authorized);$('workspace').classList.toggle('hidden',!authorized);$('signout').classList.toggle('hidden',!authorized);}
 async function refreshSettings(){const data=await api('/settings');modelsConfigured=data.models_configured;$('model-state').textContent=modelsConfigured?'雙 AI API 已設定':'雙 AI API 尚未設定';$('model-state').classList.toggle('ok',modelsConfigured);$('model-state').classList.toggle('warning',!modelsConfigured);updateRun();}
 function updateRun(){
@@ -71,6 +74,7 @@ function renderDetail(task){
  $('progress-label').textContent=last?`第 ${last.ordinal} 回合 · ${completed}／6 份 AI 回覆`:'尚未開始';
  $('progress-fill').style.width=(Math.min(6,completed)/6*100)+'%';
  showRoundHistory(task);
+ reviewUi.show(task).catch(e=>showAlert('審查管理載入失敗：'+e.message,true));
  $('run-hint').textContent=task.queue_requested===1?'已交由雲端背景佇列執行；可關閉瀏覽器，回來後查看進度。':manual?'網頁版輔助模式：需要你在 ChatGPT、Gemini 網頁操作，並把每次回覆貼回工作臺。':!modelsConfigured?'尚未設定模型 API，不會自動產生模擬結果。':task.status==='awaiting_human'?'兩位 AI 均已提出建議，請由你決定。':task.status==='closed'?'此任務已由你結案。':'點一次按鈕，系統會依序完成獨立分析、交叉審查、各自提出建議。';
  updateRun();
 }
@@ -122,7 +126,16 @@ $('run').addEventListener('click',async()=>{if(!activeTask||working||!modelsConf
  }
  await loadList();
  }catch(e){showAlert(e.message,true);}finally{working=false;updateRun();}});
-$('review-form').addEventListener('submit',async ev=>{ev.preventDefault();if(!activeTask)return;const id=activeTask.id;try{await api(`/tasks/${id}/review`,{method:'POST',body:{decision:$('decision').value,note:$('review-note').value}});$('review-note').value='';await Promise.all([loadTask(id),loadList()]);showAlert('已儲存你的最終審查決定');}catch(e){showAlert(e.message,true);}});
+$('review-form').addEventListener('submit',async ev=>{ev.preventDefault();if(!activeTask)return;const id=activeTask.id;try{
+ const decision=$('decision').value,note=$('review-note').value;
+ if(decision==='rework'){
+  await api('/tasks/'+id+'/review',{method:'POST',body:{decision,note}});
+  $('review-note').value='';await Promise.all([loadTask(id),loadList()]);showAlert('已記錄退回重議的具體要求');
+ }else{
+  const result=await reviewUi.approve(decision,note);
+  if(result)$('review-note').value='';
+ }
+ }catch(e){showAlert(e.message,true);}});
 (async()=>{try{const res=await api('/session');setAuth(res.authenticated);if(res.authenticated)await Promise.all([refreshSettings(),loadList()]);}catch(e){setAuth(false);showAlert(e.message,true);}})();
 
 async function loadManualNext(taskId){
