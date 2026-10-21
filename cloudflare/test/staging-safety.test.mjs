@@ -4,7 +4,9 @@ import {readFileSync} from 'node:fs';
 const txt=(p)=>readFileSync(new URL(p,import.meta.url),'utf8');
 test('staging requires explicit Access confirmation in addition to original two opt-in gates',()=>{
  const workflow=txt('../../.github/workflows/deploy-staging.yml');
- assert.match(workflow,/vars\.ACCESS_POLICY_VERIFIED == 'true'/);
+ assert.match(workflow,/STAGING_ACCESS_CONFIRMED:.*vars\.ACCESS_POLICY_VERIFIED/);
+ assert.match(workflow,/test "\$STAGING_ACCESS_CONFIRMED" = "true"/);
+ assert.match(workflow,/verify-staging-db\.mjs/);
  assert.match(workflow,/vars\.ENABLE_STAGING_DEPLOY == 'true'/);
  assert.match(workflow,/inputs\.confirm == 'deploy-private-staging'/);
  assert.match(workflow,/grep -qx 'workers_dev = false'/);
