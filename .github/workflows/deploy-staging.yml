@@ -1,16 +1,26 @@
 name: Deploy Cloudflare staging (two-step, opt-in)
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       stage:
-        description: "provision_closed first; activate_after_access only after Worker-level Access is verified"
-        type: choice
-        required: true
-        options: [provision_closed, activate_after_access]
-      confirm:
-        description: "Type deploy-private-staging"
-        required: true
+        description: "Provision closed first; activate only after Access is verified"
         type: string
+        required: true
+      confirm:
+        description: "Must equal deploy-private-staging"
+        type: string
+        required: true
+      source_sha:
+        description: "Pinned source commit SHA from the default-branch caller"
+        type: string
+        required: true
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      OWNER_TOKEN:
+        required: true
+      OWNER_PASSWORD:
+        required: true
 permissions:
   contents: read
 concurrency:
@@ -18,7 +28,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    if: "${{ github.ref == 'refs/heads/feat/d1-docx-review-v020' && inputs.confirm == 'deploy-private-staging' && vars.ENABLE_STAGING_DEPLOY == 'true' }}"
+    if: "${{ github.repository == 'LeoKYChen/multi-ai-review-desk' && github.ref == 'refs/heads/main' && (inputs.stage == 'provision_closed' || inputs.stage == 'activate_after_access') && inputs.confirm == 'deploy-private-staging' && vars.ENABLE_STAGING_DEPLOY == 'true' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: cloudflare-staging
@@ -32,7 +42,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # Do not check out main; use exactly the commit reviewed in the manual launcher.
+          ref: "${{ inputs.source_sha }}"
           persist-credentials: false
+      - name: Verify pinned checkout and supported launch event
+        shell: bash
+        env:
+          PINNED_SHA: "${{ inputs.source_sha }}"
+        run: |
+          set -euo pipefail
+          [[ "$PINNED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Deployment commit must be a full SHA"; exit 1; }
+          test "$(git rev-parse HEAD)" = "$PINNED_SHA" || { echo "::error::Checkout differs from the pinned source SHA"; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
