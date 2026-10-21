@@ -164,7 +164,9 @@ export async function createSource(env,taskId,input){
  await requireTask(env,taskId);
  if(!isStr(input?.claim_text)||!['verified','pending','model_inference'].includes(input.status))
   throw bad(422,'查證主張或狀態無效');
- const status=input.status,label=typeof input.source_label==='string'?input.source_label.slice(0,500):'';
+ const status=input.status,label=typeof input.source_label==='string'?input.source_label.trim():'';
+ if(label.length>500||(input.source_uri&&!/^https?:\/\//i.test(input.source_uri)))
+  throw bad(422,'來源名稱過長或網址格式不正確');
  if(status==='verified'&&(!label.trim()||!isStr(input.evidence_note,5000)))
   throw bad(422,'已查證必須有具體來源及人工核對紀錄');
  const id=uuid(),stamp=now();
@@ -184,12 +186,19 @@ export async function updateSource(env,taskId,sourceId,input){
  if(!old)throw bad(404,'找不到來源紀錄');
  if(!Number.isInteger(input?.expected_revision)||!['verified','pending','model_inference'].includes(input.status))
   throw bad(422,'請提供版本與查證狀態');
- if(input.status==='verified'&&(!old.source_label.trim()||!isStr(input.evidence_note,5000)))
+ const label=typeof input.source_label==='string'?input.source_label.trim():old.source_label;
+ const uri=input.source_uri===undefined?old.source_uri:input.source_uri;
+ const locator=input.source_locator===undefined?old.source_locator:input.source_locator;
+ if(label.length>500||(uri!==null&&(typeof uri!=='string'||uri.length>2048))||
+    (locator!==null&&(typeof locator!=='string'||locator.length>1000)))
+  throw bad(422,'來源名稱、網址或定位資訊過長');
+ if(uri&&!/^https?:\/\//i.test(uri))throw bad(422,'來源網址僅接受 HTTP 或 HTTPS');
+ if(input.status==='verified'&&(!label||!isStr(input.evidence_note,5000)))
   throw bad(422,'已核對需要實際來源與人工核對紀錄');
  const stamp=now();
  const result=await db.batch([
-  db.prepare("UPDATE source_checks SET status=?,verified_by=?,verified_at=?,revision=revision+1,updated_at=? WHERE id=? AND task_id=? AND revision=?")
-   .bind(input.status,input.status==='verified'?'human':null,input.status==='verified'?stamp:null,stamp,sourceId,taskId,input.expected_revision),
+  db.prepare("UPDATE source_checks SET status=?,source_label=?,source_uri=?,source_locator=?,verified_by=?,verified_at=?,revision=revision+1,updated_at=? WHERE id=? AND task_id=? AND revision=?")
+   .bind(input.status,label,uri,locator,input.status==='verified'?'human':null,input.status==='verified'?stamp:null,stamp,sourceId,taskId,input.expected_revision),
   db.prepare("INSERT INTO source_check_events(id,source_check_id,previous_status,new_status,actor,evidence_note,created_at) SELECT ?,?,?,?,?,?,? WHERE changes()=1")
    .bind(uuid(),sourceId,old.status,input.status,'human',input.evidence_note||'',stamp)
  ]);
