@@ -1,0 +1,38 @@
+# This is the ONLY staging-deployment entry on main. It is inert on push.
+# The application code stays in the feature branch and is pinned by full SHA.
+name: Private Feedback Desk staging - manual only
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "provision_closed first; activate_after_access only after private Access verification"
+        required: true
+        type: choice
+        options:
+          - provision_closed
+          - activate_after_access
+      confirm:
+        description: "Type deploy-private-staging to authorize this single run"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feedback-desk-private-staging
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    if: "${{ github.repository == 'LeoKYChen/multi-ai-review-desk' && github.ref == 'refs/heads/main' && inputs.confirm == 'deploy-private-staging' && vars.ENABLE_STAGING_DEPLOY == 'true' }}"
+    name: Launch pinned staging-only workflow
+    uses: LeoKYChen/multi-ai-review-desk/.github/workflows/deploy-staging.yml@2e4891d4315d7a738eacc3cad538680fd2f2d2d2
+    with:
+      stage: "${{ inputs.stage }}"
+      confirm: "${{ inputs.confirm }}"
+      source_sha: "2e4891d4315d7a738eacc3cad538680fd2f2d2d2"
+    secrets:
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+      OWNER_TOKEN: "${{ secrets.OWNER_TOKEN }}"
+      OWNER_PASSWORD: "${{ secrets.OWNER_PASSWORD }}"
