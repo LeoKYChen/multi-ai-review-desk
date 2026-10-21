@@ -109,6 +109,67 @@
               <button type="submit">提交我的最終決定</button>
             </form>
           </section>
+          <section id="finals-section" class="human-review hidden" aria-label="人工定稿與版本管理">
+            <div class="panel-title"><h3>人工定稿與歷史版本</h3><span id="draft-state" class="pill">尚未載入草稿</span></div>
+            <p class="hint">草稿會自動保存；斷線時暫存在本機裝置，並非雲端備份。同步成功才清除對應的本機暫存。使用共用電腦時請特別注意隱私。</p>
+            <label for="human-draft">你要核定的完整內容</label>
+            <textarea id="human-draft" rows="12" maxlength="100000" placeholder="請整合兩位 AI 的建議，自行撰寫正式定稿"></textarea>
+            <div class="editor-actions">
+              <button id="draft-save" type="button" class="ghost">立即保存草稿</button>
+              <button id="draft-clear-local" type="button" class="ghost">清除此裝置未同步暫存</button>
+              <button id="final-approve-revision" type="button" class="hidden">核定新的人工修訂版本</button>
+            </div>
+            <div id="draft-conflict" class="conflict-panel hidden" role="alert">
+              <h3>草稿版本衝突：沒有覆寫任何內容</h3>
+              <div class="compare-grid">
+                <div><strong>雲端已有版本</strong><pre id="draft-server-copy"></pre></div>
+                <div><strong>你在此裝置的修改</strong><pre id="draft-local-copy"></pre></div>
+              </div>
+              <div class="editor-actions">
+                <button type="button" class="ghost" id="draft-use-server">改用雲端內容</button>
+                <button type="button" id="draft-use-local">確認以我的版本更新雲端</button>
+              </div>
+            </div>
+            <div id="final-history" class="version-list"></div>
+            <pre id="final-reader" class="final-reader hidden"></pre>
+          </section>
+          <section id="objections-section" class="panel inner-panel hidden" aria-label="AI 異議整理">
+            <div class="panel-title"><h3>AI 交叉異議與人工整理</h3><button type="button" class="ghost small" id="objections-refresh">更新</button></div>
+            <p class="hint">原始 AI 意見不可修改。你可以補正異議、合併、拆分；每次修改都會保留紀錄。</p>
+            <div id="objections-list" class="version-list"></div>
+            <form id="objection-add-form">
+              <label for="objection-target">異議所指向的 AI 初評</label><select id="objection-target"></select>
+              <label for="objection-body">補充一項人工異議</label>
+              <textarea id="objection-body" rows="3" maxlength="10000"></textarea>
+              <button type="submit" class="ghost">新增人工異議（原文不變）</button>
+            </form>
+            <div class="editor-actions">
+              <button id="objections-merge" type="button" class="ghost">合併勾選的異議</button>
+            </div>
+          </section>
+          <section id="sources-section" class="panel inner-panel hidden" aria-label="來源與查證">
+            <div class="panel-title"><h3>來源紀錄與查證狀態</h3><button type="button" id="sources-refresh" class="ghost small">更新</button></div>
+            <p class="hint">AI 提出的來源預設仍待確認；只有你實際核對並填寫查證理由，才能標示「已核對」。</p>
+            <div id="sources-list" class="version-list"></div>
+            <form id="source-add-form">
+              <label for="source-claim">需查證的主張</label><textarea id="source-claim" rows="2" required></textarea>
+              <label for="source-label">來源名稱（可先留白）</label><input id="source-label" maxlength="500" />
+              <label for="source-url">來源連結（選填）</label><input id="source-url" type="url" />
+              <button type="submit" class="ghost">加入待查證清單</button>
+            </form>
+          </section>
+          <section id="recovery-section" class="panel inner-panel hidden" aria-label="模型執行失敗與恢復">
+            <h3>背景工作狀態與故障恢復</h3>
+            <p id="recovery-summary" class="hint"></p>
+            <div id="recovery-attempts" class="version-list"></div>
+            <form id="retry-form" class="hidden">
+              <label for="retry-target">要補跑的模型階段</label><select id="retry-target"></select>
+              <label for="retry-reason">重新呼叫理由</label><textarea id="retry-reason" rows="2" required></textarea>
+              <label class="inline-check"><input type="checkbox" id="retry-ack" /> 我已閱讀可能重複計費的風險，並同意僅重試缺漏模型</label>
+              <button type="submit">確認重新呼叫缺漏階段</button>
+            </form>
+            <button id="reconcile-jobs" type="button" class="ghost">檢查並安全恢復背景控制訊息</button>
+          </section>
           <div id="history" class="history"></div>
         </section>
       </section>
