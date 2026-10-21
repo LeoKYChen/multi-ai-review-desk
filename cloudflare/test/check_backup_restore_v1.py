@@ -56,11 +56,6 @@ with tempfile.TemporaryDirectory(prefix="feedback-desk-rc-") as temp:
          json.dumps({"patch": {"objection_text": "人工訂正"}}, ensure_ascii=False), "t2"),
     )
     before.execute(
-        """INSERT INTO source_checks(id,task_id,related_ai_output_id,claim_text,source_label,status,revision,updated_at)
-        VALUES(?,?,?,?,?,'verified',1,?)""".replace("'verified',1,?", "'verified',1,?"),
-        ("source-rc", t, "output-rc", "合成引用", "測試用來源", "t3"),
-    ) if False else None
-    before.execute(
         """INSERT INTO source_checks(id,task_id,related_ai_output_id,claim_text,source_label,status,
            verified_by,verified_at,revision,updated_at)
         VALUES(?,?,?,?,?,'verified','human',?,1,?)""",
