@@ -35,6 +35,11 @@
                 <option value="api">使用 API 全自動模式（需另行設定憑證與額度）</option>
               </select>
               <p class="hint">網頁版不需要 API，但每個階段仍須自行將提示詞貼到對應網站，並把回覆貼回工作臺；不是一鍵自動控制兩個網頁帳號。</p>
+              <label for="template_key">審查模板</label>
+              <select id="template_key" name="template_key">
+                <option value="general" selected>通用 AI 協作審查</option>
+                <option value="exam_essay">國考申論題批改（專用模板）</option>
+              </select>
               <label for="category">任務分類</label>
               <select id="category" name="category"><option value="一般">一般</option><option value="文件審查">文件審查</option><option value="研究分析">研究分析</option><option value="計畫討論">計畫討論</option><option value="其他">其他</option></select>
               <label for="title">任務標題</label><input id="title" name="title" maxlength="180" required placeholder="例如：請審查這份文字"/>
