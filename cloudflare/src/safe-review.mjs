@@ -133,16 +133,20 @@ export async function authorizeRetry(env,taskId,input,key){
  const delivery=await dispatch(env,job.id);
  return {queued:true,duplicate:false,job_id:job.id,delivery_pending:delivery.failed>0};
 }
-async function advanceSaved(env,job,records){
+async function advanceSaved(env,job,records,leaseHeld=false){
  const db=env.DB,next=nextPhase(job.phase,records),now=iso();
- const statements=[db.prepare("UPDATE review_jobs SET phase=?,state=?,reason_code=?,lease_until=0,revision=revision+1,updated_at=? WHERE id=?")
-  .bind(next.phase,next.state,next.state==='paused_parse'?'PARSER_NOT_INSTALLED_PHASE3':null,now,job.id)];
- if(next.state==='queued')statements.push(db.prepare("INSERT INTO queue_outbox(id,job_id,action,state,created_at,updated_at) VALUES(?,?,'continue','pending',?,?)").bind(uuid(),job.id,now,now));
+ const expectedRevision=job.revision+(leaseHeld?1:0);
+ const expectedState=leaseHeld?'running':'queued';
+ const statements=[db.prepare("UPDATE review_jobs SET phase=?,state=?,reason_code=?,lease_until=0,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND state=?")
+  .bind(next.phase,next.state,next.state==='paused_parse'?'PARSER_NOT_INSTALLED_PHASE3':null,now,job.id,expectedRevision,expectedState)];
+ if(next.state==='queued')
+  statements.push(db.prepare("INSERT INTO queue_outbox(id,job_id,action,state,created_at,updated_at) SELECT ?,?,'continue','pending',?,? WHERE changes()=1").bind(uuid(),job.id,now,now));
  if(next.state==='awaiting_human'){
-  statements.push(db.prepare("UPDATE task_rounds SET state='awaiting_human' WHERE id=? AND state='running'").bind(job.round_id));
-  statements.push(db.prepare("UPDATE tasks SET status='awaiting_human',queue_requested=0,updated_at=? WHERE id=?").bind(now,job.task_id));
+  statements.push(db.prepare("UPDATE task_rounds SET state='awaiting_human' WHERE id=? AND state='running' AND EXISTS(SELECT 1 FROM review_jobs WHERE id=? AND revision=? AND state='awaiting_human')").bind(job.round_id,job.id,expectedRevision+1));
+  statements.push(db.prepare("UPDATE tasks SET status='awaiting_human',queue_requested=0,updated_at=? WHERE id=? AND EXISTS(SELECT 1 FROM review_jobs WHERE id=? AND revision=? AND state='awaiting_human')").bind(now,job.task_id,job.id,expectedRevision+1));
  }
- await db.batch(statements);
+ const result=await db.batch(statements);
+ if((result[0].meta?.changes??0)!==1)return 'concurrent';
  if(next.state==='queued')await dispatch(env,job.id);
  return next.state;
 }
@@ -206,7 +210,7 @@ export async function consumeSafeMessage(message,env,deps={}){
   try{await pause(db,job.id,'PERSISTENCE_UNKNOWN');}catch{}
   message.ack?.();return {outcome:'paused',reason:'persistence_unknown'};
  }
- try{const state=await advanceSaved(env,job,await entries(db,job.round_id));message.ack?.();return {outcome:state,provider};}
+ try{const state=await advanceSaved(env,job,await entries(db,job.round_id),true);message.ack?.();return {outcome:state,provider};}
  catch{message.retry?.({delaySeconds:60});return {outcome:'retry_safe_control'};}
 }
 export async function reconcileSafe(env){
