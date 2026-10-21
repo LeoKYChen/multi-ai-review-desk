@@ -96,7 +96,7 @@ export default {async fetch(req,env){
   if(pathname==='/api/logout'&&req.method==='POST')return respond({authenticated:false},200,logoutHeaders());
   assert(await hasHumanAuth(req,env),401,'請先登入');
   if(pathname==='/api/health'&&req.method==='GET')return respond({ok:true,storage:'D1',models_configured:ready(env)&&apiEnabled(env)});
-  if(pathname==='/api/settings'&&req.method==='GET')return respond({models_configured:ready(env)&&apiEnabled(env),manual_mode_available:true,api_enabled:apiEnabled(env),api_call_caps:modelCallCaps(env),provider_names:['chatgpt','gemini'],uses_paid_api_credentials:true});
+  if(pathname==='/api/settings'&&req.method==='GET')return respond({models_configured:ready(env)&&apiEnabled(env),background_available:safeEnabled(env)&&ready(env)&&typeof env.AI_REVIEW_QUEUE?.send==='function',manual_mode_available:true,api_enabled:apiEnabled(env),api_call_caps:modelCallCaps(env),provider_names:['chatgpt','gemini'],uses_paid_api_credentials:true});
   if(pathname==='/api/tasks'&&req.method==='POST')return await createTask(req,env);
   if(pathname==='/api/tasks'&&req.method==='GET'){
    const filter=parseTaskFilters(new URL(req.url));
