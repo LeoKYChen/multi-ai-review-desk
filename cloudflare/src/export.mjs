@@ -54,6 +54,48 @@ export function renderTaskMarkdown(task){
     '',block(round.review.note||'（無補充說明）'),'');
   }else lines.push('### 人工審查決定','','（尚未人工審查）','');
  }
+ const finals=task.final_versions||[];
+ if(finals.length){
+  lines.push('## 人工正式核定版本（不可覆寫）','');
+  for(const f of finals){
+   lines.push('### 核定版本 v'+f.version_no,'',
+    '- 核定時間：'+f.approved_at,
+    '- 核定種類：'+(decisions[f.decision]||f.decision),
+    '- 前一版本：'+(f.parent_version_id||'（第一版）'),
+    '',block(f.body),'','核定備註：',block(f.note||'（無）'),'',
+    '#### 本版本核定當時的來源及查證狀態','');
+   let snapshot;try{snapshot=JSON.parse(f.source_snapshot_json);}catch{snapshot=[];}
+   if(!snapshot.length)lines.push('（核定時沒有來源記錄）','');
+   for(const s of snapshot){
+    lines.push('- 主張：'+safeHeading(s.claim_text),
+     '  - 來源：'+(s.source_label||'未附來源'),
+     '  - 核定當時查證狀態：'+s.status,
+     '  - 核對者／時間：'+(s.verified_by||'未核對')+'／'+(s.verified_at||'無'),'');
+   }
+  }
+ }
+ if((task.objections||[]).length){
+  lines.push('## 結構化異議與人工處理軌跡','');
+  for(const o of task.objections){
+   lines.push('### 異議 '+o.id,'',
+    '- 原始評論：'+(o.source_critique_output_id||'人工新增'),
+    '- 被質疑模型原文：'+o.target_output_id,
+    '- 原句／段落定位：'+o.anchor_kind,
+    '',block(o.quoted_text||'（整份評論）'),'',
+    '異議內容：',block(o.objection_text),'');
+   for(const e of (task.objection_events||[]).filter(x=>x.objection_id===o.id))
+    lines.push('- '+e.created_at+'：'+e.actor+' '+e.action+' '+e.details_json);
+  }
+ }
+ if((task.current_sources||[]).length){
+  lines.push('## 目前查證狀態（可能不同於核定當時）','');
+  for(const s of task.current_sources){
+   lines.push('- 主張：'+safeHeading(s.claim_text),
+    '  - 來源：'+(s.source_label||'未附來源')+(s.source_uri?'｜'+s.source_uri:''),
+    '  - 目前狀態：'+s.status,
+    '  - 最近更新：'+s.updated_at,'');
+  }
+ }
  lines.push('---','','本檔案只保存已擷取文字與審查紀錄，不包含 Word 原檔、影像或模型帳號資料。','');
  return lines.join('\n');
 }
