@@ -51,7 +51,7 @@ python3 test/check_schema.py
 - `POST /api/tasks/:id/manual-begin`：僅網頁版輔助模式；建立手動審查回合。
 - `GET /api/tasks/:id/manual-next`：取得下一個待執行模型及完整階段提示詞。
 - `POST /api/tasks/:id/manual-output`：由你貼回模型回覆，標記 `manual_unverified`，不宣稱已驗證模型來源。
-- `POST /api/tasks/:id/review`：僅由人類登入工作臺進行最終決定；`rework` 可重新建立回合。
+- `POST /api/tasks/:id/review`：僅保留人工 `rework` 退回重議；正式核定必須先儲存草稿，再使用 `POST /api/tasks/:id/finals`，不能直接繞過不可覆寫版本。
 
 **注意：網頁版輔助模式無法一鍵代替你操控兩個網頁帳號，必須自行將階段指令與 AI 回覆轉貼，這只是無 API 的過渡方案。**
 
@@ -103,7 +103,7 @@ python3 test/check_schema.py
 - `POST /api/tasks/:id/advance` 在 `BACKGROUND_JOBS_ENABLED=true` 且兩家模型 API 與 Queue binding 都已完整設定時，只負責 enqueue，回傳 HTTP 202；Queue consumer 在用戶離線後接續執行。
 - 背景模式未啟用時，`/advance` 明確拒絕啟動自動模型流程；仍可使用 `manual` 網頁版輔助模式，不會藉此使用付費 API。
 - 模型呼叫先建立嘗試紀錄，收到回覆、寫入 D1 與 persisted 狀態分開管理；**結果不明時暫停並顯示可能重複計費**，不得盲目重試。人工 retry 有冪等與風險確認。
-- Phase 3 的結構化異議解析尚未實作，因此在兩份 `critique` 原文入庫後，**刻意停於 `paused_parse`**，不宣稱整個雙 AI 三階段自動完成。
+- Phase 3 已加入結構化異議解析：兩份 `critique` 具有有效異議結構時可進入各自修正建議；資料無法可靠解析時才停於 `paused_parse`，等待本人檢視後恢復。實際模型 API 尚未驗證。
 - outbox 可經登入者 `/api/jobs/reconcile` 或另外設定 Cron trigger（目前**未啟用**）進行安全重送。若 Queue 發送失敗且沒有 Cron，自動恢復可能等待本人操作；此限制須於正式上線前驗收。
 - 使用者不願提供 Key/Token 時，不會建立 Queue、開啟付費 API 或部署。
 - 防公開部署：`wrangler.toml.example` 以 `workers_dev=false` 作為預設；手動 staging 部署需額外滿足 `ACCESS_POLICY_VERIFIED=true`，否則工作直接跳過。這個變數本身不是 Access 的密碼學證明，**仍需在 Cloudflare 實際驗收 Access 政策**。
@@ -116,3 +116,12 @@ python3 test/check_schema.py
 - 原版直接同步觸發模型的 Worker 路徑已移除，避免繞過 Phase 2 的持久化防護。
 - `cd cloudflare && npm test`、`python3 test/check_schema_v1.py` 及既有離線回歸測試均由 GitHub Actions 執行。詳細實測結果見 `../docs/PHASE_2_REPORT.md`。
 - 真實 Cloudflare Queue／D1、Cron、Access 與供應商 API 尚未實測、授權或部署。不得將模擬驗收等同正式服務已可用。
+
+
+## Phase 3–6 本地 Release Candidate（2026-10-21，未部署）
+
+- Phase 3：新增 `src/review-evidence.mjs`，可保留完整 AI 交叉評論、解析具體原句異議、由本人補正、合併或拆分，並管理來源查證狀態。
+- Phase 4：新增 `src/human-finals.mjs`，支援草稿版本 CAS、自行核定 v1/v2、不可覆寫定稿及核定時來源查證快照；純人工更正不呼叫模型。
+- Phase 5：新增 `public/review-ui.js`、`public/draft-cache.js`，顯示人工編輯、衝突比較、歷史版本、異議、查證與安全重試；離線草稿暫存於本機 IndexedDB，尚未同步的內容可能留在裝置。
+- Phase 6：已使用合成資料及 fake AI／Queue、本機 SQLite 與 GitHub Actions 測試並備份還原。詳見 [Phase 3–6 實作與驗收報告](../docs/PHASE_3_6_REPORT.md)。
+- **尚未驗收**：真實桌面／手機瀏覽器端到端操作、Cloudflare Access、遠端 D1／Queue／Cron、模型 API 授權與費用、私人 staging，以及 PR 合併正式上線。沒有另行取得使用者授權前，不執行上述操作。
