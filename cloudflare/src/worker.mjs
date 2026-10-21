@@ -7,7 +7,7 @@ import { guardedLogin, apiEnabled, modelCallCaps } from './guardrails.mjs';
 import { renderTaskMarkdown } from './export.mjs';
 import {parseTaskFilters,buildTaskListQuery} from './task-query.mjs';
 import { safeEnabled, startSafeReview, recoveryState, authorizeRetry, consumeSafeMessage, reconcileSafe, resumeParsedReview } from './safe-review.mjs';
-import {getObjections,createHumanObjection,correctObjection,resolveCritique,listSources,createSource,updateSource} from './review-evidence.mjs';
+import {getObjections,createHumanObjection,correctObjection,resolveCritique,mergeObjections,splitObjection,listSources,createSource,updateSource} from './review-evidence.mjs';
 
 const jsonHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
 const respond=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...jsonHeaders,...extra}});
@@ -112,6 +112,10 @@ export default {async fetch(req,env){
    }
    if(req.method==='POST')return respond(await createHumanObjection(env,id,await body(req)),201);
   }
+  const mergeRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/objections\/merge$/);
+  if(mergeRoute&&req.method==='POST')return respond(await mergeObjections(env,mergeRoute[1],await body(req)),201);
+  const splitRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/objections\/([a-f0-9-]{36})\/split$/);
+  if(splitRoute&&req.method==='POST')return respond(await splitObjection(env,splitRoute[1],splitRoute[2],await body(req)),201);
   const correctRoute=pathname.match(/^\/api\/tasks\/([a-f0-9-]{36})\/objections\/([a-f0-9-]{36})$/);
   if(correctRoute&&req.method==='PATCH')
    return respond(await correctObjection(env,correctRoute[1],correctRoute[2],await body(req)));
