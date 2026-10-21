@@ -103,7 +103,7 @@ export async function recoveryState(env,taskId){
 export async function authorizeRetry(env,taskId,input,key){
  requireSafeReady(env);
  if(input?.acknowledge_possible_charge!==true||typeof input.reason!=='string'||!input.reason.trim())
-  throw fail(422,'需要明確確認可能的額外計費及理由','CHARGE_ACK_REQUIRED');
+  throw fail(422,'需要明確確認可能重複計費的風險及理由','CHARGE_ACK_REQUIRED');
  if(typeof key!=='string'||key.length<12||key.length>160)throw fail(422,'Idempotency-Key 無效');
  if(!providers.includes(input.provider)||!phases.includes(input.phase))throw fail(422,'模型階段無效');
  const db=env.DB,job=await one(db,'SELECT * FROM review_jobs WHERE id=?',input.job_id);
@@ -153,6 +153,10 @@ export async function consumeSafeMessage(message,env,deps={}){
  if(!job||!['queued','running'].includes(job.state)){message.ack?.();return {outcome:'stale'};}
  const task=await one(db,'SELECT * FROM tasks WHERE id=?',job.task_id);
  if(!task||task.status!=='running'){message.ack?.();return {outcome:'stale'};}
+ // Duplicate Queue delivery must not pause or mutate an active model request.
+ if(job.state==='running'&&job.lease_until>Math.floor(Date.now()/1000)){
+  message.ack?.();return {outcome:'concurrent'};
+ }
  const current=await entries(db,job.round_id),provider=nextProvider(current,job.phase);
  if(!provider){
   try{const state=await advanceSaved(env,job,current);message.ack?.();return {outcome:state};}
