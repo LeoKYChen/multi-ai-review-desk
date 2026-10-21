@@ -20,9 +20,14 @@ jobs:
         run: node --test tools/test/*.test.mjs
       - name: Offline backup migration SQLite dry-run (no Cloudflare access)
         run: python3 tools/test/sqlite-dry-run.py
-      - name: Browser JavaScript syntax
-        run: node --check cloudflare/public/app.js
+      - name: Browser JavaScript module syntax
+        run: |
+          node --check cloudflare/public/app.js
+          node --check cloudflare/public/review-ui.js
+          node --check cloudflare/public/draft-cache.js
       - name: D1 schema and source immutability
         run: python3 cloudflare/test/check_schema.py
       - name: D1 v1 Phase 1 migrations and historical data validation
         run: python3 cloudflare/test/check_schema_v1.py
+      - name: Phase 6 D1 backup restore and immutable history
+        run: python3 cloudflare/test/check_backup_restore_v1.py
