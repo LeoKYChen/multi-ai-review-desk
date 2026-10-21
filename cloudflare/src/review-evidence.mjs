@@ -196,3 +196,53 @@ export async function updateSource(env,taskId,sourceId,input){
  if((result[0].meta?.changes??0)!==1)throw bad(409,'來源紀錄版本衝突','SOURCE_VERSION_CONFLICT');
  return {id:sourceId,status:input.status,revision:input.expected_revision+1};
 }
+
+
+/** Merge two or more same-round/same-target objections into a new HUMAN
+ * interpretation. Never delete, repurpose or change source AI entries. */
+export async function mergeObjections(env,taskId,input){
+ const ids=Array.isArray(input?.objection_ids)?[...new Set(input.objection_ids)]:[];
+ if(ids.length<2||ids.length>20||!isStr(input.objection_text,10000))
+  throw bad(422,'至少選擇兩項異議並說明整併內容');
+ const roundId=input.round_id,items=await originalAndEvents(env,taskId,roundId);
+ const selected=ids.map(id=>items.find(x=>x.id===id));
+ if(selected.some(x=>!x)||new Set(selected.map(x=>x.target_output_id)).size!==1)
+  throw bad(422,'只能合併同一回合、同一原始 AI 目標的異議');
+ const target=selected[0].target_output_id,newId=uuid(),stamp=now(),DB=env.DB;
+ const statements=[DB.prepare("INSERT INTO review_objections(id,round_id,source_critique_output_id,target_output_id,origin,anchor_kind,quoted_text,start_offset,end_offset,objection_text,created_at) VALUES(?,?,NULL,?,'human','whole','',NULL,NULL,?,?)")
+  .bind(newId,roundId,target,input.objection_text.trim(),stamp)];
+ for(const row of selected){
+  statements.push(DB.prepare("INSERT INTO objection_relations(parent_objection_id,child_objection_id,relation) VALUES(?,?,'merge')").bind(row.id,newId));
+  statements.push(DB.prepare("INSERT INTO objection_events(id,objection_id,action,actor,prior_revision,next_revision,details_json,created_at) VALUES(?,?,'merge','human',?,?,?,?)")
+   .bind(uuid(),row.id,row.revision,row.revision+1,JSON.stringify({merged_into:newId,reason:(input.reason||'').slice(0,2000)}),stamp));
+ }
+ try{await DB.batch(statements);}
+ catch{throw bad(409,'異議合併衝突，請重新整理','OBJECTION_REVISION_CONFLICT');}
+ return {id:newId,origin:'human',merged_from:ids};
+}
+/** Split one source objection into separate human assertions, preserving the
+ * parent and making each derived assertion refer to the original model output. */
+export async function splitObjection(env,taskId,objectionId,input){
+ const parent=await one(env.DB,"SELECT o.* FROM review_objections o JOIN task_rounds r ON r.id=o.round_id WHERE o.id=? AND r.task_id=?",objectionId,taskId);
+ if(!parent)throw bad(404,'找不到原始異議');
+ const current=(await originalAndEvents(env,taskId,parent.round_id)).find(x=>x.id===objectionId);
+ const parts=input?.items;
+ if(!Array.isArray(parts)||parts.length<2||parts.length>20)
+  throw bad(422,'請提供至少兩項拆分異議');
+ if(!Number.isInteger(input.expected_revision)||current.revision!==input.expected_revision)
+  throw bad(409,'異議已更新，請重新整理');
+ const target=await outputInRound(env,parent.round_id,parent.target_output_id);
+ const DB=env.DB,stamp=now(),children=[],statements=[];
+ for(const part of parts){
+  if(!isStr(part?.objection_text,10000))throw bad(422,'拆分項目理由無效');
+  const a=checkAnchor(target.body,part),id=uuid();children.push(id);
+  statements.push(DB.prepare("INSERT INTO review_objections(id,round_id,source_critique_output_id,target_output_id,origin,anchor_kind,quoted_text,start_offset,end_offset,objection_text,created_at) VALUES(?,?,NULL,?,'human',?,?,?,?,?,?)")
+   .bind(id,parent.round_id,parent.target_output_id,a.kind,a.quote,a.start,a.end,part.objection_text.trim(),stamp));
+  statements.push(DB.prepare("INSERT INTO objection_relations(parent_objection_id,child_objection_id,relation) VALUES(?,?,'split')").bind(objectionId,id));
+ }
+ statements.push(DB.prepare("INSERT INTO objection_events(id,objection_id,action,actor,prior_revision,next_revision,details_json,created_at) VALUES(?,?,'split','human',?,?,?,?)")
+  .bind(uuid(),objectionId,current.revision,current.revision+1,JSON.stringify({children,reason:typeof input.reason==='string'?input.reason.slice(0,2000):''}),stamp));
+ try{await DB.batch(statements);}
+ catch{throw bad(409,'拆分過程有衝突，未修改原始資料','OBJECTION_REVISION_CONFLICT');}
+ return {source_id:objectionId,children,source_revision:current.revision+1};
+}
