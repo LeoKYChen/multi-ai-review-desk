@@ -41,8 +41,12 @@ const latest=async(db,round,provider,phase)=>(await many(db,
  'SELECT * FROM review_model_attempts WHERE round_id=? AND provider=? AND phase=? ORDER BY attempt_no DESC',round,provider,phase))[0];
 const entries=(db,round)=>many(db,'SELECT id,provider,phase,body,source FROM ai_outputs WHERE round_id=? ORDER BY created_at',round);
 async function pause(db,jobId,reason,state='paused_failure'){
- return run(db,"UPDATE review_jobs SET state=?,reason_code=?,lease_until=0,revision=revision+1,updated_at=? WHERE id=? AND state NOT IN ('completed','awaiting_human')",
-  state,reason,iso(),jobId);
+ const stamp=iso();
+ const result=await db.batch([
+  db.prepare("UPDATE review_jobs SET state=?,reason_code=?,lease_until=0,revision=revision+1,updated_at=? WHERE id=? AND state NOT IN ('completed','awaiting_human')").bind(state,reason,stamp,jobId),
+  db.prepare("UPDATE tasks SET queue_requested=0,updated_at=? WHERE id=(SELECT task_id FROM review_jobs WHERE id=? AND state=?)").bind(stamp,jobId,state)
+ ]);
+ return result[0];
 }
 async function pending(db,jobId=null){
  return jobId
@@ -128,7 +132,8 @@ export async function authorizeRetry(env,taskId,input,key){
   db.prepare("UPDATE review_jobs SET state='queued',lease_until=0,reason_code=NULL,revision=revision+1,updated_at=? WHERE id=? AND state='paused_failure' AND phase=? AND revision=? AND EXISTS(SELECT 1 FROM retry_authorizations WHERE id=?)")
    .bind(now,job.id,input.phase,job.revision,auth),
   db.prepare("INSERT INTO queue_outbox(id,job_id,action,state,created_at,updated_at) SELECT ?,?,'resume','pending',?,? WHERE EXISTS(SELECT 1 FROM retry_authorizations WHERE id=?)")
-   .bind(uuid(),job.id,now,now,auth)
+   .bind(uuid(),job.id,now,now,auth),
+  db.prepare("UPDATE tasks SET queue_requested=1,updated_at=? WHERE id=? AND EXISTS(SELECT 1 FROM review_jobs WHERE id=? AND state='queued')").bind(now,job.task_id,job.id)
  ]);
  if((result[0].meta?.changes??0)!==1)throw fail(409,'重試票據已被其他請求使用','JOB_VERSION_CONFLICT');
  const delivery=await dispatch(env,job.id);
@@ -146,6 +151,8 @@ async function advanceSaved(env,job,records,leaseHeld=false){
   .bind(next.phase,next.state,next.state==='paused_parse'?'PARSER_NOT_INSTALLED_PHASE3':null,now,job.id,expectedRevision,expectedState)];
  if(next.state==='queued')
   statements.push(db.prepare("INSERT INTO queue_outbox(id,job_id,action,state,created_at,updated_at) SELECT ?,?,'continue','pending',?,? WHERE changes()=1").bind(uuid(),job.id,now,now));
+ if(next.state==='paused_parse')
+  statements.push(db.prepare("UPDATE tasks SET queue_requested=0,updated_at=? WHERE id=? AND EXISTS(SELECT 1 FROM review_jobs WHERE id=? AND state='paused_parse' AND revision=?)").bind(now,job.task_id,job.id,expectedRevision+1));
  if(next.state==='awaiting_human'){
   statements.push(db.prepare("UPDATE task_rounds SET state='awaiting_human' WHERE id=? AND state='running' AND EXISTS(SELECT 1 FROM review_jobs WHERE id=? AND revision=? AND state='awaiting_human')").bind(job.round_id,job.id,expectedRevision+1));
   statements.push(db.prepare("UPDATE tasks SET status='awaiting_human',queue_requested=0,updated_at=? WHERE id=? AND EXISTS(SELECT 1 FROM review_jobs WHERE id=? AND revision=? AND state='awaiting_human')").bind(now,job.task_id,job.id,expectedRevision+1));
@@ -232,7 +239,8 @@ export async function resumeParsedReview(env,taskId,roundId){
  const stamp=iso(),id=uuid();
  const r=await db.batch([
   db.prepare("UPDATE review_jobs SET phase='proposal',state='queued',reason_code=NULL,lease_until=0,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND state='paused_parse' AND phase='critique'").bind(stamp,job.id,job.revision),
-  db.prepare("INSERT INTO queue_outbox(id,job_id,action,state,created_at,updated_at) SELECT ?,?,'resume','pending',?,? WHERE changes()=1").bind(id,job.id,stamp,stamp)
+  db.prepare("INSERT INTO queue_outbox(id,job_id,action,state,created_at,updated_at) SELECT ?,?,'resume','pending',?,? WHERE changes()=1").bind(id,job.id,stamp,stamp),
+  db.prepare("UPDATE tasks SET queue_requested=1,updated_at=? WHERE id=? AND EXISTS(SELECT 1 FROM review_jobs WHERE id=? AND state='queued' AND revision=?)").bind(stamp,taskId,job.id,job.revision+1)
  ]);
  if((r[0].meta?.changes??0)!==1)return {resumed:false,reason:'concurrent'};
  if(safeEnabled(env)&&ready(env)&&typeof env.AI_REVIEW_QUEUE?.send==='function')await dispatch(env,job.id);
