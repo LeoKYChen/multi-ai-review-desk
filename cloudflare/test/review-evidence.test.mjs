@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {readFileSync,readdirSync} from 'node:fs';
 import {
  parseCritiqueText,locateQuote,critiqueStatements,getObjections,createHumanObjection,
- correctObjection,resolveCritique,listSources,createSource,updateSource
+ correctObjection,resolveCritique,mergeObjections,splitObjection,listSources,createSource,updateSource
 } from '../src/review-evidence.mjs';
 
 const out1='11111111-1111-4111-8111-111111111111';
@@ -134,4 +134,26 @@ test('錯誤結構的原文仍可由人工確認解析，不得自動偽造空�
  assert.equal(result.resolved,true);
  assert.equal(result.requires_owner_ack,true);
  assert.equal(d.prepare('SELECT status FROM critique_parse_status WHERE ai_output_id=?').get(critique).status,'resolved');
+});
+
+
+test('人工異議合併／拆分保留原始記錄、修訂事件與來源關聯',async()=>{
+ const {d,env}=database();
+ const base={round_id:roundId,target_output_id:out1,anchor_kind:'whole'};
+ const first=await createHumanObjection(env,taskId,{...base,objection_text:'主張一'});
+ const second=await createHumanObjection(env,taskId,{...base,objection_text:'主張二'});
+ const merged=await mergeObjections(env,taskId,{round_id:roundId,
+  objection_ids:[first.id,second.id],objection_text:'合併後的人工異議',reason:'同一爭點'});
+ assert.equal(merged.merged_from.length,2);
+ assert.equal(d.prepare('SELECT COUNT(*) n FROM objection_relations WHERE relation=?').get('merge').n,2);
+ const split=await splitObjection(env,taskId,merged.id,{expected_revision:0,reason:'拆成獨立問題',
+  items:[{anchor_kind:'whole',objection_text:'論點 A'},{anchor_kind:'whole',objection_text:'論點 B'}]});
+ assert.equal(split.children.length,2);
+ assert.equal(d.prepare('SELECT COUNT(*) n FROM objection_relations WHERE relation=?').get('split').n,2);
+ const originals=d.prepare('SELECT objection_text FROM review_objections WHERE id IN (?,?) ORDER BY objection_text').all(first.id,second.id);
+ assert.deepEqual(originals.map(x=>x.objection_text),['主張一','主張二']);
+ assert.equal(d.prepare('SELECT COUNT(*) n FROM objection_events').get().n,3);
+ await assert.rejects(()=>splitObjection(env,taskId,merged.id,{
+  expected_revision:0,items:[{objection_text:'a'},{objection_text:'b'}]
+ }),/已更新/);
 });
