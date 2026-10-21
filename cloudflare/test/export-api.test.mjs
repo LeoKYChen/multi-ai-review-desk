@@ -10,6 +10,8 @@ const db={prepare(sql){
  })};}};
  if(sql.startsWith('SELECT * FROM task_rounds'))return{bind(){return{all:async()=>({results:[{id:'round1',ordinal:1,state:'closed',created_at:'2026-10-20'}]})};}};
  if(sql.includes('FROM ai_outputs WHERE round_id='))return{bind(){return{all:async()=>({results:[{provider:'gemini',phase:'proposal',body:'修正 B',created_at:'2026-10-20T12:10Z',source:'manual_unverified'}]})};}};
+ if(sql.includes('FROM final_versions')||sql.includes('FROM review_objections')||sql.includes('FROM objection_events')||sql.includes('FROM source_checks'))
+  return{bind(){return{all:async()=>({results:[]})};}};
  if(sql.startsWith('SELECT decision,note,created_at'))return{bind(){return{first:async()=>({decision:'accept_gemini',note:'採納二',created_at:'2026-10-20T12:12Z'})};}};
  throw Error(sql);
 }};
