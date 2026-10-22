@@ -351,12 +351,14 @@ function bridgeSend(kind,extras={}){
 function reviewForLearning(t){
  const r=last(t);
  if(!r||r.outputs.length!==6)throw Error('請先完成本回合全部六份 AI 意見');
+ if(!r.review)throw Error('請先提交人工審查決定，再將結果回傳學習平臺');
+ if(r.review.decision==='rework')throw Error('本回合已退回重作，請完成下一回合並重新人工核定後再回傳');
  const lines=['# 雙 AI 交叉審查｜'+t.title,'','此為學習用非官方 AI 評語；法條、學理及引註仍須人工查證。',''];
  for(const phase of phases){
   lines.push('## '+names[phase],'');
   for(const p of providers){const x=r.outputs.find(o=>o.phase===phase&&o.provider===p);if(!x)throw Error('回合尚有缺漏');lines.push('### '+label(t,p,r),'',x.body,'');}
  }
- lines.push('## 人工核定','','結果：'+(r.review?decisionLabel(t,r):'尚未核定'),'','說明：'+(r.review?.note||'（未填寫）'));
+ lines.push('## 人工核定','','結果：'+decisionLabel(t,r),'','說明：'+(r.review.note||'（未填寫）'));
  const result=lines.join('\n');
  if(result.length>75000)throw Error('結果超過 75,000 字元，請從「匯出紀錄（MD）」備份並手動分段帶回');
  return result;
