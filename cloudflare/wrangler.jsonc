@@ -1,0 +1,13 @@
+{
+  // Temporary, non-functional bootstrap. Full Feedback Desk is NOT deployed.
+  // This file deliberately has no D1 binding and no private credentials.
+  "name": "multi-ai-review-desk-staging",
+  "main": "src/staging-bootstrap.mjs",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": {
+    "MODEL_API_ENABLED": "false",
+    "BACKGROUND_JOBS_ENABLED": "false"
+  }
+}
