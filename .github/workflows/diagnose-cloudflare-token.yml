@@ -124,26 +124,41 @@ jobs:
               finish()
           result("Token verification", True, "Cloudflare reports an active API token")
 
-          # Read-only D1 listing, matching the first Cloudflare operation in the
-          # existing staging deployment. Filter by the exact staging DB name.
+          # Probe both D1 LIST and direct D1 GET. Both calls are read-only.
+          # A D1 list error with a successful direct GET helps identify a
+          # list-endpoint-specific problem rather than a missing database.
           status, data = api_get("/accounts/" + account + "/d1/database?name=multi-ai-review-desk-staging-db")
-          if status is None:
-              result("D1 read permission", False, "Network error during D1 listing")
-              finish()
-          if status != 200 or data is None or data.get("success") is not True:
-              result("D1 read permission", False, f"HTTP {status}; Cloudflare error code(s): {error_codes(data)}. Check account access and D1 Read/Write permission")
-              finish()
-          databases = data.get("result")
-          valid_list = isinstance(databases, list)
-          matched = valid_list and any(
-              isinstance(item, dict)
-              and str(item.get("uuid", "")).lower() == database.lower()
-              and item.get("name") == "multi-ai-review-desk-staging-db"
-              for item in databases
-          )
-          if not matched:
-              result("Staging D1 identity", False, "D1 listing succeeded, but the database name and UUID did not match in this account")
-              finish()
-          result("Staging D1 identity", True, "D1 read succeeded and staging database name/UUID matched")
+          list_ok = status == 200 and isinstance(data, dict) and data.get("success") is True
+          if not list_ok:
+              if status is None:
+                  result("D1 list permission", False, "Network error during D1 listing")
+              else:
+                  result("D1 list permission", False, f"HTTP {status}; Cloudflare error code(s): {error_codes(data)}")
+          else:
+              result("D1 list permission", True, "D1 list endpoint returned success")
+              databases = data.get("result")
+              matched = isinstance(databases, list) and any(
+                  isinstance(item, dict)
+                  and str(item.get("uuid", "")).lower() == database.lower()
+                  and item.get("name") == "multi-ai-review-desk-staging-db"
+                  for item in databases
+              )
+              result("D1 list identity", bool(matched), "Staging database name and UUID matched" if matched else "Name/UUID not found in returned list")
+
+          status, data = api_get("/accounts/" + account + "/d1/database/" + database)
+          direct_ok = status == 200 and isinstance(data, dict) and data.get("success") is True
+          if not direct_ok:
+              if status is None:
+                  result("Direct D1 GET", False, "Network error during direct D1 lookup")
+              else:
+                  result("Direct D1 GET", False, f"HTTP {status}; Cloudflare error code(s): {error_codes(data)}")
+          else:
+              db = data.get("result")
+              matched = (
+                  isinstance(db, dict)
+                  and str(db.get("uuid", "")).lower() == database.lower()
+                  and db.get("name") == "multi-ai-review-desk-staging-db"
+              )
+              result("Direct D1 GET", bool(matched), "Staging database name and UUID matched" if matched else "Direct response did not match expected staging database")
           finish()
           PY
