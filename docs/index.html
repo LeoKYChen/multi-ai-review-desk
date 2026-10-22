@@ -33,7 +33,7 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 @media(max-width:1000px){.layout{grid-template-columns:290px minmax(0,1fr)}main{padding:24px}.intro-mark{display:none}}
 @media(max-width:850px){.layout{grid-template-columns:1fr}.panel{padding:20px}.intro h2{font-size:26px}.workflow-strip>div{padding:13px 12px;gap:8px}.workflow-strip small{display:none}}
 @media(max-width:500px){main{padding:18px 14px 45px}.intro{padding:25px 0 20px}.intro h2{font-size:23px}.intro p{font-size:13px}.top h1{font-size:18px}.top .sub{font-size:11px}.workflow-strip strong{font-size:12px}.workflow-strip>div{padding:12px 9px;gap:6px}.top>.row{width:100%;justify-content:flex-end}.panel{padding:18px}.workflow-strip{margin-bottom:16px}}
-</style>
+.api-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}.api-actions .field{margin:0}.api-actions #api-limit{width:100%;max-width:220px}#api-slots .lane>button[id^="test-"]{display:block;width:100%;min-height:46px;text-align:center}@media(max-width:500px){.api-actions{grid-template-columns:minmax(0,1fr)}.api-actions #api-limit{max-width:none}.api-actions #clear-keys{width:100%}}</style>
 </head>
 <body>
 <main>
@@ -44,7 +44,7 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 <details class="panel" style="margin-top:18px" id="api-settings"><summary style="cursor:pointer;font-weight:bold">API 設定與連線測試　｜　展開選擇兩家 AI</summary>
 <p class="sub">每次開啟後自行填入金鑰。先選服務、貼入金鑰，按「測試連線／取得模型」；模型清單不代表每個模型都支援文字生成，請選可用的文字模型。連線測試不產生模型內容。手動模式仍可直接使用。</p>
 <div class="board" id="api-slots"></div>
-<div class="row"><label for="api-limit">每次回覆 token 上限</label><input id="api-limit" type="number" min="256" max="16000" step="256" value="4096" style="width:130px"><button id="clear-keys" type="button" class="secondary">清除金鑰</button></div>
+<div class="api-actions"><div class="field"><label for="api-limit">每次回覆 token 上限</label><input id="api-limit" type="number" min="256" max="16000" step="256" value="4096"></div><button id="clear-keys" type="button" class="secondary">清除金鑰</button></div>
 <p class="sub">整回合最多 6 次生成。這是輸出長度上限，並非金額上限；輸入及模型思考也可能計費。停止後不再送出下一次請求，已送出的請求仍可能計費。法律引用仍須自行查證。</p></details>
 <div class="layout">
 <aside class="panel">
@@ -109,7 +109,10 @@ const STORAGE_KEY='multi-ai-v0.8-offline-data';
 const MAX_DOCX_BYTES=3*1024*1024, MAX_XML_BYTES=7*1024*1024, MAX_TEXT=50000,MAX_JSON_BYTES=8*1024*1024;
 const BRIDGE_PROTOCOL="psd-dual-ai-v1",BRIDGE_ORIGIN="https://leokychen.github.io";
 const bridgeNonce=new URLSearchParams(location.hash.slice(1)).get("psd-bridge");
-const bridgeEnabled=Boolean(bridgeNonce&&/^[0-9a-f]{32}$/.test(bridgeNonce)&&window.opener&&location.origin===BRIDGE_ORIGIN);
+const bridgeEnabled=Boolean(bridgeNonce&&/^[0-9a-f]{32}$/.test(bridgeNonce)&&location.origin===BRIDGE_ORIGIN);
+const bridgeHandoffKey=bridgeEnabled?'psd-dual-ai-handoff:'+bridgeNonce:null;
+const bridgeReturnKey=bridgeEnabled?'psd-dual-ai-return:'+bridgeNonce:null;
+const bridgeAckKey=bridgeEnabled?'psd-dual-ai-ack:'+bridgeNonce:null;
 let bridgeTaskId=null,bridgeReceived=false;
 let state={version:8,tasks:[],selectedId:null},storageOK=false,parsedFileName='';
 // View-only state: NOT included in v0.8 backups, never changes the active review round.
@@ -344,7 +347,7 @@ $('import-json').addEventListener('change',async e=>{const file=e.target.files?.
 $('delete').addEventListener('click',()=>{const t=selected();if(!t)return;if(!confirm(`確定刪除「${t.title}」及全部回合嗎？此操作不可復原，建議先備份。`))return;state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=state.tasks[0]?.id||null;save();render();notice('已刪除任務');});
 
 function bridgeSend(kind,extras={}){
- if(!bridgeEnabled)return;
+ if(!bridgeEnabled||!window.opener)return;
  try{window.opener.postMessage({protocol:BRIDGE_PROTOCOL,kind,nonce:bridgeNonce,...extras},BRIDGE_ORIGIN);}
  catch{ /* 開啟來源可能已關閉，保留本機任務 */ }
 }
