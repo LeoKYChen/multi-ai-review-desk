@@ -1,0 +1,149 @@
+# Read-only manual diagnostics. Never deploys, applies D1 migrations, or prints credentials.
+name: Cloudflare token diagnostics (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type diagnose-cloudflare-token to authorize read-only checks"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: "${{ github.repository == 'LeoKYChen/multi-ai-review-desk' && github.ref == 'refs/heads/main' && inputs.confirm == 'diagnose-cloudflare-token' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Deliberately no environment: read the repository-level secret only.
+    steps:
+      - name: Verify token and staging D1 access (GET requests only)
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          CLOUDFLARE_ACCOUNT_ID: "${{ vars.CLOUDFLARE_ACCOUNT_ID }}"
+          CF_STAGING_D1_DATABASE_ID: "${{ vars.CF_STAGING_D1_DATABASE_ID }}"
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          import urllib.error
+          import urllib.request
+
+          # Never include token, account ID, database ID, response body or
+          # arbitrary API messages in console output / GitHub job summaries.
+          reports = []
+          def result(label, ok, detail):
+              reports.append((label, ok, detail))
+              print(f"{'PASS' if ok else 'FAIL'}: {label} - {detail}")
+
+          def finish():
+              dest = os.environ.get("GITHUB_STEP_SUMMARY")
+              if dest:
+                  with open(dest, "a", encoding="utf-8") as f:
+                      f.write("### Feedback Desk: Cloudflare read-only diagnostics\n\n")
+                      for label, ok, detail in reports:
+                          f.write(f"- {'PASS' if ok else 'FAIL'}: {label} — {detail}\n")
+                      f.write("\nNo secret values, database writes, migrations, Worker deployments, or paid model calls.\n")
+              sys.exit(0 if reports and all(ok for _, ok, _ in reports) else 1)
+
+          token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+          account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+          database = os.environ.get("CF_STAGING_D1_DATABASE_ID", "")
+
+          if not token:
+              result("Repository secret", False, "CLOUDFLARE_API_TOKEN is missing or empty")
+              finish()
+          if token.strip() != token or not re.fullmatch(r"[\x21-\x7e]+", token):
+              result("Token format", False, "Token contains whitespace or non-ASCII characters; copy only the raw token")
+              finish()
+          if token.lower().startswith(("bearer ", "authorization:", "curl ", "token ")):
+              result("Token format", False, "Use the raw token only; do not include headers, prefixes or commands")
+              finish()
+          result("Repository secret", True, "Nonempty raw token found; its value is not printed")
+
+          if not re.fullmatch(r"[0-9a-fA-F]{32}", account):
+              result("Account variable format", False, "CLOUDFLARE_ACCOUNT_ID must be 32 hex characters")
+              finish()
+          if not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", database):
+              result("D1 variable format", False, "CF_STAGING_D1_DATABASE_ID must be a UUID")
+              finish()
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          opener = urllib.request.build_opener(NoRedirect())
+
+          def api_get(path):
+              req = urllib.request.Request(
+                  "https://api.cloudflare.com/client/v4" + path,
+                  method="GET",
+                  headers={"Authorization": "Bearer " + token, "Accept": "application/json"}
+              )
+              try:
+                  with opener.open(req, timeout=15) as response:
+                      status, raw = response.status, response.read(32768)
+              except urllib.error.HTTPError as e:
+                  status, raw = e.code, e.read(32768)
+              except (urllib.error.URLError, TimeoutError, OSError):
+                  return None, None
+              try:
+                  data = json.loads(raw)
+                  return status, data if isinstance(data, dict) else None
+              except (ValueError, UnicodeError):
+                  return status, None
+
+          def error_codes(data):
+              errors = (data or {}).get("errors", [])
+              if not isinstance(errors, list):
+                  return "unavailable"
+              codes = []
+              for item in errors:
+                  if isinstance(item, dict) and isinstance(item.get("code"), int):
+                      codes.append(str(item["code"]))
+              return ",".join(codes[:5]) if codes else "none"
+
+          status, data = api_get("/user/tokens/verify")
+          if status is None:
+              result("Token verification", False, "Network error; Cloudflare API not reached")
+              finish()
+          active = (
+              status == 200
+              and data is not None
+              and data.get("success") is True
+              and isinstance(data.get("result"), dict)
+              and data["result"].get("status") == "active"
+          )
+          if not active:
+              result("Token verification", False, f"HTTP {status}; Cloudflare error code(s): {error_codes(data)}. Check repository Secret's raw active token")
+              finish()
+          result("Token verification", True, "Cloudflare reports an active API token")
+
+          # Read-only D1 listing, matching the first Cloudflare operation in the
+          # existing staging deployment. Filter by the exact staging DB name.
+          status, data = api_get("/accounts/" + account + "/d1/database?name=multi-ai-review-desk-staging-db")
+          if status is None:
+              result("D1 read permission", False, "Network error during D1 listing")
+              finish()
+          if status != 200 or data is None or data.get("success") is not True:
+              result("D1 read permission", False, f"HTTP {status}; Cloudflare error code(s): {error_codes(data)}. Check account access and D1 Read/Write permission")
+              finish()
+          databases = data.get("result")
+          valid_list = isinstance(databases, list)
+          matched = valid_list and any(
+              isinstance(item, dict)
+              and str(item.get("uuid", "")).lower() == database.lower()
+              and item.get("name") == "multi-ai-review-desk-staging-db"
+              for item in databases
+          )
+          if not matched:
+              result("Staging D1 identity", False, "D1 listing succeeded, but the database name and UUID did not match in this account")
+              finish()
+          result("Staging D1 identity", True, "D1 read succeeded and staging database name/UUID matched")
+          finish()
+          PY
