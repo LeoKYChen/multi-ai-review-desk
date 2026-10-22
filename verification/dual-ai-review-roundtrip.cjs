@@ -34,6 +34,7 @@ const {chromium,webkit}=require('playwright');
     });
     const nonce='b'.repeat(32);
     await page.addInitScript(({nonce})=>{
+     if(localStorage.getItem('multi-ai-v0.8-offline-data'))return; // Do not reseed a completed import after reload.
      localStorage.setItem('psd-dual-ai-handoff:'+nonce,JSON.stringify({
       nonce,createdAt:Date.now(),
       payload:{
