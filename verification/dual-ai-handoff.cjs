@@ -12,4 +12,18 @@ assert(html.includes('state.tasks.length>=100'),'preserve task limit');
 assert(html.includes('if(!save()){state.tasks.pop();state.selectedId=oldId;'),'rollback failed task creation');
 assert(html.includes('r.outputs.length!==6'),'return only complete cross-review');
 assert(html.includes("bridgeSend('return',{text:result})"));
+const extract=html.match(/function reviewForLearning\(t\)\{([\s\S]*?)\n\}\nwindow\.addEventListener/);
+assert(extract,'return serializer is available');
+const serializer=vm.runInNewContext('function reviewForLearning(t){'+extract[1]+'\n};reviewForLearning',{
+ last:t=>t.rounds.at(-1),phases:['independent','critique','proposal'],
+ providers:['chatgpt','gemini'],names:{independent:'獨立',critique:'交叉',proposal:'修正'},
+ label:(_t,p)=>p,decisionLabel:()=> '部分採納'
+});
+const outputs=['independent','critique','proposal'].flatMap(phase=>['chatgpt','gemini'].map(provider=>({phase,provider,body:'批改內容'})));
+const task={title:'測試題',rounds:[{outputs,review:null}]};
+assert.throws(()=>serializer(task),/人工審查決定/);
+task.rounds[0].review={decision:'rework',note:'重作'};
+assert.throws(()=>serializer(task),/退回重作/);
+task.rounds[0].review={decision:'partial',note:'人工核定'};
+assert.match(serializer(task),/人工核定/);
 console.log('PASS dual-AI handoff scripts parse and guard untrusted messages');
