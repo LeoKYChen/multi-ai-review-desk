@@ -37,7 +37,7 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 </head>
 <body>
 <main>
-<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">OpenAI / Gemini / Claude 任選兩家 · 本機保存 · 自備 API</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.11 · 10/22 修正</span></div></header>
+<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">OpenAI / Gemini / Claude 任選兩家 · 本機保存 · 自備 API</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.12 · 10/22 匯入修正</span></div></header>
 <section class="intro"><div><div class="eyebrow">MULTI-AI REVIEW / YOUR WORKSPACE</div><h2>兩個 AI 協作，最後由你決定。</h2><p>從一份文件或一個問題開始，讓不同觀點彼此檢驗，留下可回查的討論與決定。</p></div><div class="intro-mark">獨立思考 · 交互檢驗 · 人工核定</div></section>
 <div class="workflow-strip" aria-label="工作流程"><div><span>01</span><div><strong>分別分析</strong><small>兩家模型各自提出初稿</small></div></div><div><span>02</span><div><strong>交叉審查</strong><small>交換觀點，找出缺漏</small></div></div><div><span>03</span><div><strong>修訂與核定</strong><small>各自修訂，由你決定</small></div></div></div>
 <div class="warning">任務儲存在這個瀏覽器（未加密）。API 分析會將文件、指令及本回合相關意見傳送到你選定的兩家服務，依服務商方案計費。金鑰只保留於本次頁面，不寫入任務或備份。請定期備份 JSON；勿使用未獲准傳送的個資或機密文件。</div>
@@ -48,6 +48,12 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 <details><summary style="cursor:pointer;font-weight:700">檢查帶入的原題與答案</summary><div id="bridge-import-text" class="view" style="margin-top:10px;max-height:300px"></div></details>
 <button id="bridge-view-task" class="secondary" type="button" style="margin-top:12px;width:100%">查看已匯入任務</button>
 </section>
+<details class="panel" style="margin-top:18px" id="manual-handoff"><summary style="cursor:pointer;font-weight:700">題目未自動帶入？手動匯入（iPhone 備援）</summary>
+<p class="sub">請在觀護人學習平臺考古題的 AI 批改區按「複製題目與答案供雙 AI 匯入」，再回到這裡貼上。內容只在本機解析，不會因此呼叫任何 AI。</p>
+<div class="field"><label for="handoff-paste">題目交接資料</label><textarea id="handoff-paste" rows="4" maxlength="85000" placeholder="貼上從考古題複製的交接資料（JSON）"></textarea></div>
+<button id="handoff-import" type="button" style="width:100%">匯入題目及答案</button>
+<p id="handoff-message" class="sub" role="status" aria-live="polite"></p>
+</details>
 <details class="panel" style="margin-top:18px" id="api-settings"><summary style="cursor:pointer;font-weight:bold">API 設定與連線測試　｜　展開選擇兩家 AI</summary>
 <p class="sub">每次開啟後自行填入金鑰。先選服務、貼入金鑰，按「測試連線／取得模型」；模型清單不代表每個模型都支援文字生成，請選可用的文字模型。連線測試不產生模型內容。手動模式仍可直接使用。</p>
 <div class="board" id="api-slots"></div>
@@ -373,34 +379,56 @@ function reviewForLearning(t){
  if(result.length>75000)throw Error('結果超過 75,000 字元，請從「匯出紀錄（MD）」備份並手動分段帶回');
  return result;
 }
+function bridgeCreate(payload,{manual=false}={}){
+ if(bridgeReceived&&!manual){bridgeSend('created');return true;}
+ try{
+  if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('來源資料格式無效');
+  for(const [key,limit] of [['title',180],['instruction',20000],['documentText',50000]]){
+   if(typeof payload[key]!=='string'||payload[key].length>limit||(key!=='documentText'&&!payload[key].trim()))throw Error('交接欄位無效：'+key);
+  }
+  if(state.tasks.length>=100)throw Error('工作臺已達 100 筆任務上限，請先備份整理');
+  const t={id:uuid(),title:payload.title,instruction:payload.instruction,documentText:payload.documentText,documentName:'',category:'備考',createdAt:iso(),updatedAt:iso(),status:'new',rounds:[]};
+  const oldId=state.selectedId;state.tasks.push(t);state.selectedId=t.id;
+  if(!save()){state.tasks.pop();state.selectedId=oldId;throw Error('本機空間無法儲存任務');}
+  if(!manual){bridgeReceived=true;bridgeTaskId=t.id;}
+  render();
+  $('bridge-import-summary').classList.remove('hidden');
+  $('bridge-import-summary').querySelector('strong').textContent=manual?'已手動匯入觀護人考古題':'已自動匯入觀護人考古題';
+  $('bridge-import-title').textContent=t.title;
+  $('bridge-import-text').textContent=t.documentText;
+  $('bridge-status').textContent=manual?'題目與答案已手動匯入。完成審查後，請匯出 Markdown 評語，再貼回原題的 AI 批改結果。':'已從觀護人學習平臺載入題目與答案。完成六份意見後，可按「回傳雙 AI 意見至學習平臺」。回傳前請保持原練習頁面開啟。';
+  if(!manual)bridgeSend('created');
+  notice('已建立本次雙 AI 備考任務。');
+  return true;
+ }catch(e){
+  const msg=String(e.message||e);
+  if(manual)$('handoff-message').textContent=msg;
+  else{$('bridge-status').textContent=msg;bridgeSend('save-error',{message:msg.slice(0,180)});}
+  return false;
+ }
+}
 window.addEventListener('message',event=>{
  const d=event.data;
  if(!bridgeEnabled||event.origin!==BRIDGE_ORIGIN||event.source!==window.opener||!d||d.protocol!==BRIDGE_PROTOCOL||d.nonce!==bridgeNonce)return;
- if(d.kind==='create'){
-  if(bridgeReceived){bridgeSend('created');return;}
-  try{
-   const payload=d.payload;
-   if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('來源資料格式無效');
-   for(const [key,limit] of [['title',180],['instruction',20000],['documentText',50000]]){
-    if(typeof payload[key]!=='string'||payload[key].length>limit||(key!=='documentText'&&!payload[key].trim()))throw Error('交接欄位無效：'+key);
-   }
-   if(state.tasks.length>=100)throw Error('工作臺已達 100 筆任務上限，請先備份整理');
-   const t={id:uuid(),title:payload.title,instruction:payload.instruction,documentText:payload.documentText,documentName:'',category:'備考',createdAt:iso(),updatedAt:iso(),status:'new',rounds:[]};
-   const oldId=state.selectedId;state.tasks.push(t);state.selectedId=t.id;
-   if(!save()){state.tasks.pop();state.selectedId=oldId;throw Error('本機空間無法儲存任務');}
-   bridgeReceived=true;bridgeTaskId=t.id;render();
-   $('bridge-import-summary').classList.remove('hidden');
-   $('bridge-import-title').textContent=t.title;
-   $('bridge-import-text').textContent=t.documentText;
-   $('bridge-status').textContent='已從觀護人學習平臺載入題目與答案。完成六份意見後，可按「回傳雙 AI 意見至學習平臺」。回傳前請保持原練習頁面開啟。';
-   bridgeSend('created');notice('已建立本次雙 AI 備考任務。');
-  }catch(e){$('bridge-status').textContent=String(e.message);bridgeSend('save-error',{message:String(e.message).slice(0,180)});}
- }else if(d.kind==='saved'){
+ if(d.kind==='create')bridgeCreate(d.payload);
+ else if(d.kind==='saved'){
   $('bridge-status').textContent='已成功寫回原練習紀錄。原題答案及既有意見保持不變。';
   notice('已收到學習平臺儲存成功確認。');
  }else if(d.kind==='save-error'){
   $('bridge-status').textContent='原練習紀錄未能保存：'+String(d.message||'未知原因')+'。請先下載 Markdown 備份。';
  }
+});
+$('handoff-import').addEventListener('click',()=>{
+ try{
+  const raw=$('handoff-paste').value.trim();
+  if(!raw||raw.length>85000)throw Error('請貼入有效的題目交接資料（85,000 字以內）');
+  const data=JSON.parse(raw);
+  if(data?.format!=='psd-dual-ai-import-v1')throw Error('不是觀護人學習平臺的交接資料，請使用原題頁的複製按鈕');
+  if(bridgeCreate(data.payload,{manual:true})){
+   $('handoff-paste').value='';
+   $('handoff-message').textContent='已匯入並儲存；可點上方「查看已匯入任務」核對內容';
+  }
+ }catch(e){$('handoff-message').textContent='匯入失敗：'+String(e.message||e);}
 });
 $('bridge-return').addEventListener('click',()=>{
  const t=selected();if(!bridgeEnabled||!t||t.id!==bridgeTaskId){notice('此任務沒有有效的來源連線');return;}
@@ -426,7 +454,7 @@ function consumeHandoff(){
   if(item.nonce!==bridgeNonce||!Number.isFinite(item.createdAt)||Date.now()-item.createdAt>120000||Date.now()<item.createdAt-10000){
    localStorage.removeItem(bridgeHandoffKey);$('bridge-status').textContent='題目交接已過期，請從原練習頁重新送出';return;
   }
-  window.dispatchEvent(new MessageEvent('message',{origin:BRIDGE_ORIGIN,source:window.opener||null,data:{protocol:BRIDGE_PROTOCOL,nonce:bridgeNonce,kind:'create',payload:item.payload}}));
+  bridgeCreate(item.payload);
   if(bridgeReceived)localStorage.removeItem(bridgeHandoffKey);
  }catch(e){$('bridge-status').textContent='無法讀取交接資料：'+e.message;}
 }

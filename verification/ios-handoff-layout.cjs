@@ -35,6 +35,16 @@ const {chromium,webkit}=require('playwright');
     assert.match(await page.locator('#bridge-import-text').textContent(),/【我的答案】/);
     assert.equal(await page.evaluate(n=>localStorage.getItem('psd-dual-ai-handoff:'+n),nonce),null);
     assert.equal(await page.locator('#task-title').inputValue(),'','new task form remains empty, but import preview is visible');
+    await page.locator('#manual-handoff summary').click();
+    await page.locator('#handoff-paste').fill(JSON.stringify({format:'psd-dual-ai-import-v1',payload:{
+      title:'113年 心理學 第1題',instruction:'獨立分析心理學概念',documentText:'【原題】測驗效度\\n【我的答案】建構效度'
+    }}));
+    await page.locator('#handoff-import').click();
+    assert.match(await page.locator('#bridge-import-title').textContent(),/113年 心理學/);
+    assert.match(await page.locator('#bridge-import-text').textContent(),/建構效度/);
+    assert.match(await page.locator('#handoff-message').textContent(),/已匯入並儲存/);
+    assert.equal(await page.locator('#handoff-paste').inputValue(),'','manual payload cleared after import');
+
     await page.locator('#api-settings summary').click();
     for(const id of ['test-chatgpt','test-gemini']){
      const rect=await page.locator('#'+id).boundingBox(),field=await page.locator('#model-'+id.split('-')[1]).boundingBox();
