@@ -1,7 +1,12 @@
 name: Deploy standalone AI review desk to GitHub Pages
 
-# Manual publishing only. Enable Pages in repository Settings first.
+# Automatically publish changes to the site; keep manual dispatch as a fallback.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:
