@@ -1,0 +1,23 @@
+name: Dual AI learning handoff
+on:
+  push:
+    paths:
+      - 'docs/index.html'
+      - 'verification/dual-ai-handoff.cjs'
+      - '.github/workflows/dual-ai-handoff.yml'
+  pull_request:
+    paths:
+      - 'docs/index.html'
+      - 'verification/dual-ai-handoff.cjs'
+      - '.github/workflows/dual-ai-handoff.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node verification/dual-ai-handoff.cjs

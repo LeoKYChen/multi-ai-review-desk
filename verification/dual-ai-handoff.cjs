@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const html=fs.readFileSync(path.resolve(__dirname,'../docs/index.html'),'utf8');
+const js=html.match(/<script>([\s\S]*?)<\/script>/);
+assert(js&&js[1],'embedded application script found');
+new vm.Script(js[1],{filename:'docs/index.html:inline'});
+assert(html.includes('id="bridge-return"'));
+assert(html.includes('const BRIDGE_PROTOCOL="psd-dual-ai-v1"'));
+assert(html.includes('event.origin!==BRIDGE_ORIGIN||event.source!==window.opener'),'check origin and opener');
+assert(html.includes('bridgeNonce')&&html.includes('d.nonce!==bridgeNonce'),'check per-window nonce');
+assert(html.includes('state.tasks.length>=100'),'preserve task limit');
+assert(html.includes('if(!save()){state.tasks.pop();state.selectedId=oldId;'),'rollback failed task creation');
+assert(html.includes('r.outputs.length!==6'),'return only complete cross-review');
+assert(html.includes("bridgeSend('return',{text:result})"));
+console.log('PASS dual-AI handoff scripts parse and guard untrusted messages');

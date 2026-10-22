@@ -67,8 +67,8 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 <div class="row between"><h2 id="project-title">選取或建立任務</h2><span class="pill" id="project-status">尚未選取</span></div>
 <div id="empty-state" class="sub empty-guide"><div class="empty-icon" aria-hidden="true">↔</div><strong>從你的第一個任務開始</strong><p>在左側填入交辦指令與文件，建立任務。<br>展開上方 API 設定，或沿用手動複製貼回，即可開始雙 AI 討論。</p></div>
 <div id="project-content" class="hidden">
-<div class="row between"><div class="sub" id="task-meta"></div><div class="row"><button id="export" type="button" class="secondary small">匯出紀錄（MD）</button><button id="delete" type="button" class="danger small">刪除任務</button></div></div>
-<h3 style="margin-top:18px">原始交辦（唯讀）</h3><div id="original" class="view"></div>
+<div class="row between"><div class="sub" id="task-meta"></div><div class="row"><button id="bridge-return" type="button" class="secondary small hidden">回傳雙 AI 意見至學習平臺</button><button id="export" type="button" class="secondary small">匯出紀錄（MD）</button><button id="delete" type="button" class="danger small">刪除任務</button></div></div>
+<p id="bridge-status" class="sub" role="status" aria-live="polite"></p><h3 style="margin-top:18px">原始交辦（唯讀）</h3><div id="original" class="view"></div>
 <h3 style="margin-top:18px">文件擷取文字（唯讀）</h3><div id="source" class="view"></div>
 <div class="divider"></div>
 <div class="row between"><h3>雙 AI 審查</h3><button id="begin" type="button">開始本回合</button></div>
@@ -107,6 +107,10 @@ const decisions={accept_chatgpt:'採納 ChatGPT',accept_gemini:'採納 Gemini',p
 const statuses={new:'未開始',running:'審查中',awaiting_human:'待人工核定',needs_rework:'退回重議',closed:'已由人類結案'};
 const STORAGE_KEY='multi-ai-v0.8-offline-data';
 const MAX_DOCX_BYTES=3*1024*1024, MAX_XML_BYTES=7*1024*1024, MAX_TEXT=50000,MAX_JSON_BYTES=8*1024*1024;
+const BRIDGE_PROTOCOL="psd-dual-ai-v1",BRIDGE_ORIGIN="https://leokychen.github.io";
+const bridgeNonce=new URLSearchParams(location.hash.slice(1)).get("psd-bridge");
+const bridgeEnabled=Boolean(bridgeNonce&&/^[0-9a-f]{32}$/.test(bridgeNonce)&&window.opener&&location.origin===BRIDGE_ORIGIN);
+let bridgeTaskId=null,bridgeReceived=false;
 let state={version:8,tasks:[],selectedId:null},storageOK=false,parsedFileName='';
 // View-only state: NOT included in v0.8 backups, never changes the active review round.
 const reader={taskId:null,ordinal:null,phase:'all'};
@@ -258,7 +262,7 @@ function showRoundHistory(t){
   entry.append(box,button);hist.append(entry);
  }
 }
-function render(){renderList();const t=selected();$('empty-state').classList.toggle('hidden',!!t);$('project-content').classList.toggle('hidden',!t);if(!t){$('project-title').textContent='選取或建立任務';$('project-status').textContent='尚未選取';return;}
+function render(){renderList();const t=selected();$('bridge-return').classList.toggle('hidden',!bridgeEnabled||!t||t.id!==bridgeTaskId);$('empty-state').classList.toggle('hidden',!!t);$('project-content').classList.toggle('hidden',!t);if(!t){$('project-title').textContent='選取或建立任務';$('project-status').textContent='尚未選取';return;}
  $('project-title').textContent=t.title;$('project-status').textContent=statuses[t.status];$('task-meta').textContent=`分類：${t.category}　|　建立：${t.createdAt.slice(0,10)}　|　${t.rounds.length} 回合`;
  $('original').textContent=t.instruction;$('source').textContent=t.documentText||'（未提供文件文字）';$('begin').disabled=!['new','needs_rework'].includes(t.status);
  const s=currentStep(t),r=last(t),completed=r?.outputs.length||0;
@@ -338,12 +342,66 @@ $('export').addEventListener('click',()=>{const t=selected();if(!t)return;downlo
 $('export-json').addEventListener('click',()=>{const data={...state,exportedAt:iso(),format:'multi-ai-offline-v0.8'};download(JSON.stringify(data,null,2),'multi-ai-backup-'+new Date().toISOString().slice(0,10)+'.json','application/json;charset=utf-8');notice('已下載全部任務備份（JSON）；檔案未加密。');});
 $('import-json').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;e.target.value='';try{if(file.size>MAX_JSON_BYTES)throw Error('JSON 備份不可超過 8MB');const incoming=cleanImported(JSON.parse(await file.text()));if(!confirm(`確定以備份中的 ${incoming.tasks.length} 筆任務，覆蓋目前 ${state.tasks.length} 筆任務嗎？請先備份舊資料。`))return;state=incoming;save();render();notice('JSON 已還原並嘗試保存到本機。');}catch(err){notice('無法還原 JSON：'+err.message);}});
 $('delete').addEventListener('click',()=>{const t=selected();if(!t)return;if(!confirm(`確定刪除「${t.title}」及全部回合嗎？此操作不可復原，建議先備份。`))return;state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=state.tasks[0]?.id||null;save();render();notice('已刪除任務');});
+
+function bridgeSend(kind,extras={}){
+ if(!bridgeEnabled)return;
+ try{window.opener.postMessage({protocol:BRIDGE_PROTOCOL,kind,nonce:bridgeNonce,...extras},BRIDGE_ORIGIN);}
+ catch{ /* 開啟來源可能已關閉，保留本機任務 */ }
+}
+function reviewForLearning(t){
+ const r=last(t);
+ if(!r||r.outputs.length!==6)throw Error('請先完成本回合全部六份 AI 意見');
+ const lines=['# 雙 AI 交叉審查｜'+t.title,'','此為學習用非官方 AI 評語；法條、學理及引註仍須人工查證。',''];
+ for(const phase of phases){
+  lines.push('## '+names[phase],'');
+  for(const p of providers){const x=r.outputs.find(o=>o.phase===phase&&o.provider===p);if(!x)throw Error('回合尚有缺漏');lines.push('### '+label(t,p,r),'',x.body,'');}
+ }
+ lines.push('## 人工核定','','結果：'+(r.review?decisionLabel(t,r):'尚未核定'),'','說明：'+(r.review?.note||'（未填寫）'));
+ const result=lines.join('\n');
+ if(result.length>75000)throw Error('結果超過 75,000 字元，請從「匯出紀錄（MD）」備份並手動分段帶回');
+ return result;
+}
+window.addEventListener('message',event=>{
+ const d=event.data;
+ if(!bridgeEnabled||event.origin!==BRIDGE_ORIGIN||event.source!==window.opener||!d||d.protocol!==BRIDGE_PROTOCOL||d.nonce!==bridgeNonce)return;
+ if(d.kind==='create'){
+  if(bridgeReceived){bridgeSend('created');return;}
+  try{
+   const payload=d.payload;
+   if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('來源資料格式無效');
+   for(const [key,limit] of [['title',180],['instruction',20000],['documentText',50000]]){
+    if(typeof payload[key]!=='string'||payload[key].length>limit||(key!=='documentText'&&!payload[key].trim()))throw Error('交接欄位無效：'+key);
+   }
+   if(state.tasks.length>=100)throw Error('工作臺已達 100 筆任務上限，請先備份整理');
+   const t={id:uuid(),title:payload.title,instruction:payload.instruction,documentText:payload.documentText,documentName:'',category:'備考',createdAt:iso(),updatedAt:iso(),status:'new',rounds:[]};
+   const oldId=state.selectedId;state.tasks.push(t);state.selectedId=t.id;
+   if(!save()){state.tasks.pop();state.selectedId=oldId;throw Error('本機空間無法儲存任務');}
+   bridgeReceived=true;bridgeTaskId=t.id;render();
+   $('bridge-status').textContent='已從觀護人學習平臺載入題目與答案。完成六份意見後，可按「回傳雙 AI 意見至學習平臺」。回傳前請保持原練習頁面開啟。';
+   bridgeSend('created');notice('已建立本次雙 AI 備考任務。');
+  }catch(e){$('bridge-status').textContent=String(e.message);bridgeSend('save-error',{message:String(e.message).slice(0,180)});}
+ }else if(d.kind==='saved'){
+  $('bridge-status').textContent='已成功寫回原練習紀錄。原題答案及既有意見保持不變。';
+  notice('已收到學習平臺儲存成功確認。');
+ }else if(d.kind==='save-error'){
+  $('bridge-status').textContent='原練習紀錄未能保存：'+String(d.message||'未知原因')+'。請先下載 Markdown 備份。';
+ }
+});
+$('bridge-return').addEventListener('click',()=>{
+ const t=selected();if(!bridgeEnabled||!t||t.id!==bridgeTaskId){notice('此任務沒有有效的來源連線');return;}
+ try{
+  const result=reviewForLearning(t);
+  bridgeSend('return',{text:result});
+  $('bridge-status').textContent='已送出回傳請求，請在原本的學習平臺視窗確認是否保存。';
+ }catch(e){notice(e.message);}
+});
+
 setupSlots();
 $('api-next').addEventListener('click',()=>runAPI(false));$('api-all').addEventListener('click',()=>runAPI(true));
 $('api-stop').addEventListener('click',()=>{stopRequested=true;apiController?.abort();apiStatus('正在停止；不會送出下一次請求。');});
 $('clear-keys').addEventListener('click',()=>{for(const p of providers)$('key-'+p).value='';apiStatus('已清除本次金鑰。');});
 window.addEventListener('pagehide',()=>{stopRequested=true;apiController?.abort();for(const p of providers)$('key-'+p).value='';});
-restore();render();
+restore();render();if(bridgeEnabled){bridgeSend('ready');$('bridge-status').textContent='正在等待來源學習平臺傳送題目與作答…';}
 })();
 
 </script>
