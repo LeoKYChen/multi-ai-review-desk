@@ -1,0 +1,6 @@
+.env
+.env.*
+!.env.example
+node_modules/
+multi-ai-backup-*.json
+multi-ai-review-*.md
