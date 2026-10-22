@@ -396,6 +396,7 @@ $('bridge-return').addEventListener('click',()=>{
  const t=selected();if(!bridgeEnabled||!t||t.id!==bridgeTaskId){notice('此任務沒有有效的來源連線');return;}
  try{
   const result=reviewForLearning(t);
+  localStorage.setItem(bridgeReturnKey,JSON.stringify({nonce:bridgeNonce,text:result,createdAt:Date.now()}));
   bridgeSend('return',{text:result});
   $('bridge-status').textContent='已送出回傳請求，請在原本的學習平臺視窗確認是否保存。';
  }catch(e){notice(e.message);}
@@ -406,7 +407,32 @@ $('api-next').addEventListener('click',()=>runAPI(false));$('api-all').addEventL
 $('api-stop').addEventListener('click',()=>{stopRequested=true;apiController?.abort();apiStatus('正在停止；不會送出下一次請求。');});
 $('clear-keys').addEventListener('click',()=>{for(const p of providers)$('key-'+p).value='';apiStatus('已清除本次金鑰。');});
 window.addEventListener('pagehide',()=>{stopRequested=true;apiController?.abort();for(const p of providers)$('key-'+p).value='';});
-restore();render();if(bridgeEnabled){bridgeSend('ready');$('bridge-status').textContent='正在等待來源學習平臺傳送題目與作答…';}
+function consumeHandoff(){
+ if(!bridgeEnabled||bridgeReceived)return;
+ try{
+  const raw=localStorage.getItem(bridgeHandoffKey);if(!raw)return;
+  const item=JSON.parse(raw);
+  if(item.nonce!==bridgeNonce||!Number.isFinite(item.createdAt)||Date.now()-item.createdAt>120000||Date.now()<item.createdAt-10000){
+   localStorage.removeItem(bridgeHandoffKey);$('bridge-status').textContent='題目交接已過期，請從原練習頁重新送出';return;
+  }
+  window.dispatchEvent(new MessageEvent('message',{origin:BRIDGE_ORIGIN,source:window.opener||null,data:{protocol:BRIDGE_PROTOCOL,nonce:bridgeNonce,kind:'create',payload:item.payload}}));
+  if(bridgeReceived)localStorage.removeItem(bridgeHandoffKey);
+ }catch(e){$('bridge-status').textContent='無法讀取交接資料：'+e.message;}
+}
+window.addEventListener('storage',event=>{
+ if(!bridgeEnabled||event.key!==bridgeAckKey||!event.newValue)return;
+ try{
+  const ack=JSON.parse(event.newValue);if(ack.nonce!==bridgeNonce)return;
+  $('bridge-status').textContent=ack.ok?'已成功寫回原練習紀錄。原題答案及既有意見保持不變。':'回寫失敗：'+String(ack.message||'請匯出 MD 保存');
+  notice($('bridge-status').textContent);localStorage.removeItem(bridgeAckKey);
+ }catch{}
+});
+restore();render();if(bridgeEnabled){
+ $('bridge-status').textContent='正在載入學習平臺的題目與作答…';
+ consumeHandoff();
+ if(!bridgeReceived)bridgeSend('ready');
+ window.addEventListener('storage',event=>{if(event.key===bridgeHandoffKey)consumeHandoff();});
+}
 })();
 
 </script>
