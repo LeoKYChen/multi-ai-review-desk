@@ -28,7 +28,7 @@ const {chromium,webkit}=require('playwright');
     await source.goto(origin+'/source.html');
     const page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
-    await page.route('**/*',async route=>{
+    await page.route(origin+'/**',async route=>{
      const response=await route.fetch();
      await route.fulfill({response,body:(await response.text()).replaceAll('https://leokychen.github.io',origin)});
     });
@@ -80,6 +80,45 @@ const {chromium,webkit}=require('playwright');
     await page.reload({waitUntil:'domcontentloaded'});
     assert.match(await page.locator('#reader-count').textContent(),/共 1 回合/);
     assert.match(await page.locator('#source').textContent(),/【我的答案】/);
+    // Exercise all six automatic API steps with intercepted responses. No real API keys or paid calls.
+    const calls=[];
+    await page.route('https://api.openai.com/v1/responses',async route=>{
+     const req=route.request(),body=req.postDataJSON();
+     calls.push({provider:'openai',input:body.input,model:body.model,headers:req.headers()});
+     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+      status:'completed',output:[{type:'message',content:[{type:'output_text',text:'【模擬 OpenAI 評語】'+calls.length}]}]
+     })});
+    });
+    await page.route('https://generativelanguage.googleapis.com/v1beta/models/**',async route=>{
+     const req=route.request(),body=req.postDataJSON();
+     calls.push({provider:'gemini',input:body.contents?.[0]?.parts?.[0]?.text,model:req.url(),headers:req.headers()});
+     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+      candidates:[{finishReason:'STOP',content:{parts:[{text:'【模擬 Gemini 評語】'+calls.length}]}}]
+     })});
+    });
+    await page.locator('#task-title').fill('模擬 API 六階段測試');
+    await page.locator('#instruction').fill('測試兩家服務各三份評語');
+    await page.locator('#document-text').fill('測試題幹及答案（非真實個案）');
+    await page.locator('#create-submit').click();
+    await page.locator('#begin').click();
+    await page.locator('#api-settings summary').click();
+    await page.locator('#key-chatgpt').fill('test-only-openai');
+    await page.locator('#key-gemini').fill('test-only-gemini');
+    await page.locator('#model-chatgpt').fill('test-model-a');
+    await page.locator('#model-gemini').fill('test-model-b');
+    page.on('dialog',dialog=>dialog.accept());
+    await page.locator('#api-all').click();
+    await page.waitForFunction(()=>document.querySelector('#project-status')?.textContent.includes('待人工核定'),{timeout:20000});
+    assert.equal(calls.length,6,'exactly six mocked API calls');
+    assert.equal(calls.filter(x=>x.provider==='openai').length,3);
+    assert.equal(calls.filter(x=>x.provider==='gemini').length,3);
+    assert.ok(calls.every(x=>x.input.includes('測試題幹及答案')),'every AI step includes the source question');
+    const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('multi-ai-v0.8-offline-data')));
+    const task=saved.tasks.find(x=>x.title==='模擬 API 六階段測試');
+    assert.equal(task.rounds[0].outputs.length,6,'mocked outputs saved');
+    assert.equal(task.rounds[0].participants.chatgpt.service,'openai');
+    assert.equal(task.rounds[0].participants.gemini.service,'gemini');
+    assert.ok(!JSON.stringify(saved).includes('test-only-openai')&&!JSON.stringify(saved).includes('test-only-gemini'),'API keys must not be persisted');
     assert.deepEqual(errors,[],'unexpected JS errors in '+name);
     await context.close();
     console.log(name+': six mock outputs, human decision, origin-linked return, acknowledgement, and reload passed');
