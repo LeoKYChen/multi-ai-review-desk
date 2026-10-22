@@ -25,3 +25,16 @@ test('native Cloudflare Builds config is closed and does not attach D1', () => {
   assert.match(config, /"BACKGROUND_JOBS_ENABLED"\s*:\s*"false"/);
   assert.doesNotMatch(config, /"d1_databases"|"routes"|"route"|"assets"|"queues"/);
 });
+
+test('root Wrangler config matches closed Cloudflare production Build settings', () => {
+  const config = JSON.parse(readFileSync(join(root, '..', 'wrangler.jsonc'), 'utf8'));
+  assert.equal(config.name, 'multi-ai-review-desk-staging');
+  assert.equal(config.main, 'cloudflare/src/staging-bootstrap.mjs');
+  assert.equal(config.workers_dev, false);
+  assert.equal(config.preview_urls, false);
+  assert.equal(config.vars.MODEL_API_ENABLED, 'false');
+  assert.equal(config.vars.BACKGROUND_JOBS_ENABLED, 'false');
+  assert.equal(Object.hasOwn(config, 'd1_databases'), false);
+  assert.equal(Object.hasOwn(config, 'routes'), false);
+  assert.equal(Object.hasOwn(config, 'assets'), false);
+});
