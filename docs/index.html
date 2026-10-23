@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="description" content="自備 API 的雙 AI 協作工作臺：獨立分析、交叉評論、修訂與人工核定，紀錄保存在你的瀏覽器。">
-<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.11 自備 API 版</title>
+<meta name="description" content="預設手動審查的雙 AI 協作工作臺：獨立分析、交叉評論、修訂與人工核定，紀錄保存在你的瀏覽器。">
+<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.13 手動審查版</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;color-scheme:light;--bg:#f2f5f8;--ink:#172b40;--muted:#607385;--accent:#2a648f;--border:#dce5ee;--success:#20704a;--warn:#9c501c}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:1260px;margin:auto;padding:22px 20px 70px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px}.identity{display:flex;align-items:center;gap:12px}.symbol{background:#1e3b56;color:white;border-radius:11px;padding:12px 15px;font-size:19px}h1{font-size:24px;margin:0}h2{font-size:19px;margin:0 0 16px}h3{font-size:16px;margin:0 0 12px}p{line-height:1.65}.sub{color:var(--muted);font-size:13px;line-height:1.6}.pill{font-size:12px;background:#e6f2f6;color:#215a78;border-radius:15px;padding:7px 11px;white-space:nowrap}.pill.good{background:#e5f4e9;color:var(--success)}.pill.bad{background:#fff0e7;color:var(--warn)}.warning{margin-top:19px;border:1px solid #f0d5a8;background:#fff7e9;border-radius:12px;padding:13px 16px;font-size:13px;line-height:1.7}.layout{display:grid;grid-template-columns:365px minmax(0,1fr);gap:18px;margin-top:20px}.panel{background:white;border:1px solid var(--border);border-radius:15px;padding:22px;box-shadow:0 2px 12px #152e3b08}.field{display:grid;gap:7px;margin-bottom:15px}label{font-weight:700;font-size:13px}input,textarea,select{font:inherit;font-size:14px;border-radius:9px;border:1px solid #bfcfdb;padding:11px 12px;color:#1c2d3c;background:#fcfdff;width:100%;outline-color:var(--accent)}textarea{resize:vertical;line-height:1.6}button{font:inherit;font-size:13px;font-weight:700;border:1px solid #284963;background:#284963;color:#fff;padding:10px 14px;border-radius:9px;cursor:pointer}button:hover{filter:brightness(1.10)}button:disabled{opacity:.5;cursor:not-allowed}button.secondary{background:white;color:#284963;border-color:#bccddb}button.danger{background:white;color:#a14135;border-color:#e7bab7}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.small{font-size:12px}.hidden{display:none!important}.divider{border-top:1px solid var(--border);margin:18px 0}.board{display:grid;grid-template-columns:1fr 1fr;gap:12px}.lane{padding:15px;border-radius:12px;border:1px solid var(--border);min-width:0}.lane h3{padding-bottom:10px;border-bottom:1px solid var(--border)}.stage{background:#f7fafc;border-radius:9px;padding:12px;margin:9px 0}.stage .title{font-size:12px;font-weight:750;color:#2c5c7f;margin-bottom:7px}.stage .body{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;max-height:260px;overflow:auto}.view{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;background:#f7fafc;padding:14px;border-radius:10px;max-height:190px;overflow:auto}.step{border:1px solid #b8d8eb;background:#f6fbff;border-radius:13px;padding:17px;margin-bottom:16px}.history{font-size:13px;color:#475c6a;line-height:1.8}.notice{position:fixed;bottom:20px;right:20px;padding:12px 16px;background:#17384b;color:#fff;border-radius:10px;max-width:440px;box-shadow:0 4px 24px #0002;font-size:13px;z-index:30}.count{color:#2c6488;font-weight:750;font-size:12px}.button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.button-row button{flex:1}#project-pane{min-width:0}.tasks{display:grid;gap:8px;max-height:300px;overflow:auto;margin:12px 0}.task{display:block;text-align:left;width:100%;background:#fff;color:var(--ink);border:1px solid var(--border);padding:11px 12px;font-weight:400}.task.active{background:#edf7fc;border-color:var(--accent)}.task strong,.task small{display:block;word-break:break-word}.task small{font-size:11px;color:var(--muted);margin-top:5px}.task-head{font-size:14px}.progress{height:7px;background:#e3ebf1;border-radius:9px;overflow:hidden;margin:9px 0 16px}.progress div{background:#2c719e;height:100%;transition:width .2s}.bar{background:#fbfcfe;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:18px}.button-row.inline{justify-content:flex-end}.button-row.inline button{flex:unset}.list-title{margin-top:18px;font-size:14px}.muted-small{font-size:12px;color:var(--muted);line-height:1.6}.word-label{font-size:12px;color:var(--success)}.link{color:var(--accent);text-decoration:none}.link:hover{text-decoration:underline}
@@ -37,10 +37,14 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 </head>
 <body>
 <main>
-<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">OpenAI / Gemini / Claude 任選兩家 · 本機保存 · 自備 API</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.12 · 10/22 匯入修正</span></div></header>
+<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">手動複製貼回 · 六階段審查 · 本機保存</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.13 · 預設手動審查</span></div></header>
 <section class="intro"><div><div class="eyebrow">MULTI-AI REVIEW / YOUR WORKSPACE</div><h2>兩個 AI 協作，最後由你決定。</h2><p>從一份文件或一個問題開始，讓不同觀點彼此檢驗，留下可回查的討論與決定。</p></div><div class="intro-mark">獨立思考 · 交互檢驗 · 人工核定</div></section>
 <div class="workflow-strip" aria-label="工作流程"><div><span>01</span><div><strong>分別分析</strong><small>兩家模型各自提出初稿</small></div></div><div><span>02</span><div><strong>交叉審查</strong><small>交換觀點，找出缺漏</small></div></div><div><span>03</span><div><strong>修訂與核定</strong><small>各自修訂，由你決定</small></div></div></div>
-<div class="warning">任務儲存在這個瀏覽器（未加密）。API 分析會將文件、指令及本回合相關意見傳送到你選定的兩家服務，依服務商方案計費。金鑰只保留於本次頁面，不寫入任務或備份。請定期備份 JSON；勿使用未獲准傳送的個資或機密文件。</div>
+<div class="warning">任務儲存在這個瀏覽器（未加密），請定期備份 JSON。預設手動審查，不需 API 金鑰：複製提示詞到對應 AI 網頁，再貼回完整回覆。請自行確認可傳送的資料範圍。</div>
+<section class="panel" style="margin-top:18px" aria-label="審查操作模式">
+<div class="field"><label for="review-mode">操作模式</label><select id="review-mode" aria-describedby="mode-help"><option value="manual" selected>手動審查（預設，不需 API 金鑰）</option><option value="api">進階：API 自動審查（自備金鑰）</option></select></div>
+<p id="mode-help" class="sub">開始本回合後，依序複製提示詞、開啟對應 AI 網頁、貼回並儲存回覆；完成六份意見後由你核定。切換模式不會更動已儲存的內容。</p>
+</section>
 <section id="bridge-import-summary" class="panel hidden" aria-live="polite" style="margin-top:18px;border-color:#b5d2d5;background:#f2faf7">
 <strong style="display:block;margin-bottom:8px">已自動匯入觀護人考古題</strong>
 <div id="bridge-import-title" style="font-size:14px;overflow-wrap:anywhere"></div>
@@ -54,8 +58,8 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 <button id="handoff-import" type="button" style="width:100%">匯入題目及答案</button>
 <p id="handoff-message" class="sub" role="status" aria-live="polite"></p>
 </details>
-<details class="panel" style="margin-top:18px" id="api-settings"><summary style="cursor:pointer;font-weight:bold">API 設定與連線測試　｜　展開選擇兩家 AI</summary>
-<p class="sub">每次開啟後自行填入金鑰。先選服務、貼入金鑰，按「測試連線／取得模型」；模型清單不代表每個模型都支援文字生成，請選可用的文字模型。連線測試不產生模型內容。手動模式仍可直接使用。</p>
+<details class="panel hidden" style="margin-top:18px" id="api-settings"><summary style="cursor:pointer;font-weight:bold">進階：API 設定與連線測試　｜　展開選擇兩家 AI</summary>
+<p class="sub">API 會將文件、指令及相關意見傳送到選定的服務商，可能另行計費；網頁聊天訂閱與 API 用量分開。金鑰僅留在本次頁面，不寫入任務或備份。每次開啟後自行填入金鑰。先選服務、貼入金鑰，按「測試連線／取得模型」；模型清單不代表每個模型都支援文字生成，請選可用的文字模型。連線測試不產生模型內容。手動模式仍可直接使用。</p>
 <div class="board" id="api-slots"></div>
 <div class="api-actions"><div class="field"><label for="api-limit">每次回覆 token 上限</label><input id="api-limit" type="number" min="256" max="16000" step="256" value="4096"></div><button id="clear-keys" type="button" class="secondary">清除金鑰</button></div>
 <p class="sub">整回合最多 6 次生成。這是輸出長度上限，並非金額上限；輸入及模型思考也可能計費。停止後不再送出下一次請求，已送出的請求仍可能計費。法律引用仍須自行查證。</p></details>
@@ -78,16 +82,16 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 </aside>
 <section class="panel" id="project-pane">
 <div class="row between"><h2 id="project-title">選取或建立任務</h2><span class="pill" id="project-status">尚未選取</span></div>
-<div id="empty-state" class="sub empty-guide"><div class="empty-icon" aria-hidden="true">↔</div><strong>從你的第一個任務開始</strong><p>在左側填入交辦指令與文件，建立任務。<br>展開上方 API 設定，或沿用手動複製貼回，即可開始雙 AI 討論。</p></div>
+<div id="empty-state" class="sub empty-guide"><div class="empty-icon" aria-hidden="true">↔</div><strong>從你的第一個任務開始</strong><p>在左側填入交辦指令與文件，建立任務。<br>按「開始本回合」，依提示複製到 AI 網頁並貼回回覆，即可開始雙 AI 討論。</p></div>
 <div id="project-content" class="hidden">
 <div class="row between"><div class="sub" id="task-meta"></div><div class="row"><button id="bridge-return" type="button" class="secondary small hidden">回傳雙 AI 意見至學習平臺</button><button id="export" type="button" class="secondary small">匯出紀錄（MD）</button><button id="delete" type="button" class="danger small">刪除任務</button></div></div>
 <p id="bridge-status" class="sub" role="status" aria-live="polite"></p><h3 style="margin-top:18px">原始交辦（唯讀）</h3><div id="original" class="view"></div>
 <h3 style="margin-top:18px">文件擷取文字（唯讀）</h3><div id="source" class="view"></div>
 <div class="divider"></div>
 <div class="row between"><h3>雙 AI 審查</h3><button id="begin" type="button">開始本回合</button></div>
-<p class="sub">可手動貼回，或設定 API 自動執行。每回合固定兩家服務與模型；變更請於下一回合設定。</p>
-<div class="row"><button id="api-next" type="button">API 執行下一步</button><button id="api-all" type="button">API 執行剩餘步驟</button><button id="api-stop" type="button" class="danger" disabled>停止</button></div>
-<p id="api-status" class="sub" role="status" aria-live="polite">尚未呼叫 API。請先開始本回合。</p>
+<p class="sub">預設手動複製貼回，依序完成兩個 AI 各三階段的意見。需要 API 自動執行時，請在上方操作模式選擇進階選項；API 每回合固定兩家服務與模型。</p>
+<div id="api-controls" class="hidden"><div class="row"><button id="api-next" type="button">API 執行下一步</button><button id="api-all" type="button">API 執行剩餘步驟</button><button id="api-stop" type="button" class="danger" disabled>停止</button></div>
+<p id="api-status" class="sub" role="status" aria-live="polite">尚未呼叫 API。請先開始本回合。</p></div>
 <div class="bar"><div class="row between"><span class="count" id="progress-label">本回合尚未開始</span><span class="muted-small" id="phase-note"></span></div><div class="progress"><div id="progress-fill" style="width:0%"></div></div></div>
 <div id="manual-step" class="step hidden"><div class="count" id="stage-count"></div><h3 id="stage-heading"></h3>
 <div class="field"><label for="prompt">本階段完整提示詞</label><textarea id="prompt" rows="7" readonly></textarea></div>
@@ -165,7 +169,7 @@ function setupSlots(){for(const [i,p]of providers.entries()){
  $('test-'+p).addEventListener('click',async()=>{if(apiBusy)return;try{const c=config(p,false);stopRequested=false;setBusy(true);$('test-status-'+p).textContent='正在測試…';const d=await apiRequest(c,'/models');const ids=c.service==='gemini'?(d.models||[]).filter(x=>(x.supportedGenerationMethods||[]).includes('generateContent')).map(x=>x.name.replace(/^models\//,'')):(d.data||[]).map(x=>x.id);const list=$('models-'+p);list.replaceChildren();for(const id of ids.sort()){const o=node('option');o.value=id;list.append(o);}$('test-status-'+p).textContent=`連線成功，取得 ${ids.length} 個模型（清單可能分頁）；請選擇文字模型或手動填入 ID。`;}catch(e){$('test-status-'+p).textContent=e.message;}finally{setBusy(false);}});
  }}
 async function runAPI(all){
- if(apiBusy)return;const t=selected(),r=last(t);if(t?.status!=='running'||!currentStep(t)){notice('請先開始本回合');return;}
+ if(apiBusy||$('review-mode').value!=='api')return;const t=selected(),r=last(t);if(t?.status!=='running'||!currentStep(t)){notice('請先開始本回合');return;}
  try{const configs=Object.fromEntries(providers.map(p=>[p,config(p)])),limit=Number($('api-limit').value);if(!Number.isInteger(limit)||limit<256||limit>16000)throw Error('輸出上限須為 256–16000 的整數');if(configs.chatgpt.service===configs.gemini.service)throw Error('請選擇兩家不同服務');
  if(r.participants){for(const p of providers){if(r.participants[p].service!==configs[p].service||r.participants[p].model!==configs[p].model)throw Error('本回合服務／模型已固定，請將設定調回：'+providers.map(x=>label(t,x)).join('、'));}}
  else if(r.outputs.length)throw Error('此回合已有舊版／手動回覆，請以手動方式完成；新回合可使用 API');
@@ -442,6 +446,16 @@ $('bridge-return').addEventListener('click',()=>{
 
 $('bridge-view-task').addEventListener('click',()=>{$('project-content').scrollIntoView({behavior:'smooth',block:'start'});});
 setupSlots();
+// Operation mode is view-only and resets to manual on every page load.
+function updateReviewMode(){
+ const advanced=$('review-mode').value==='api';
+ $('api-settings').classList.toggle('hidden',!advanced);
+ $('api-controls').classList.toggle('hidden',!advanced);
+ if(!advanced)$('api-settings').open=false;
+}
+$('review-mode').value='manual';
+$('review-mode').addEventListener('change',updateReviewMode);
+updateReviewMode();
 $('api-next').addEventListener('click',()=>runAPI(false));$('api-all').addEventListener('click',()=>runAPI(true));
 $('api-stop').addEventListener('click',()=>{stopRequested=true;apiController?.abort();apiStatus('正在停止；不會送出下一次請求。');});
 $('clear-keys').addEventListener('click',()=>{for(const p of providers)$('key-'+p).value='';apiStatus('已清除本次金鑰。');});
