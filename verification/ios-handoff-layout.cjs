@@ -44,6 +44,13 @@ const {chromium,webkit}=require('playwright');
     assert.match(await page.locator('#bridge-import-text').textContent(),/建構效度/);
     assert.match(await page.locator('#handoff-message').textContent(),/已匯入並儲存/);
     assert.equal(await page.locator('#handoff-paste').inputValue(),'','manual payload cleared after import');
+    assert.match(await page.locator('#bridge-task-warning').textContent(),/目前選取的是其他任務/,'warn when looking at a previous/different task');
+    await page.locator('#bridge-view-task').click();
+    assert.match(await page.locator('#project-title').textContent(),/114年 少年事件處理法 第2題/,'view imported must reselect the actual handoff task');
+    assert.equal(await page.locator('#bridge-task-warning').isVisible(),false,'warning disappears for the imported task');
+    const buttons=await page.evaluate(()=>{const a=document.getElementById('export').getBoundingClientRect(),b=document.getElementById('delete').getBoundingClientRect();return {exportWidth:a.width,deleteWidth:b.width,exportBottom:a.bottom,deleteBottom:b.bottom};});
+    assert.ok(Math.abs(buttons.exportWidth-buttons.deleteWidth)<2,'export/delete controls have equal widths on iPhone');
+    assert.ok(Math.abs(buttons.exportBottom-buttons.deleteBottom)<2,'export/delete controls align at bottom');
 
     await page.locator('#review-mode').selectOption('api');
     await page.locator('#api-settings summary').click();
