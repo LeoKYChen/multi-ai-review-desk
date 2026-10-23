@@ -57,6 +57,10 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 <div class="field"><label for="review-mode">操作模式</label><select id="review-mode" aria-describedby="mode-help"><option value="manual" selected>手動審查（預設，不需 API 金鑰）</option><option value="api">進階：API 自動審查（自備金鑰）</option></select></div>
 <p id="mode-help" class="sub">開始本回合後，依序複製提示詞、開啟對應 AI 網頁、貼回並儲存回覆；完成六份意見後由你核定。切換模式不會更動已儲存的內容。</p>
 </section>
+<section id="bridge-handoff-alert" class="panel hidden" role="alert" style="margin-top:18px;border-color:#e3bb9c;background:#fff7ed">
+<strong>本次題目尚未成功帶入</strong>
+<p class="sub" style="margin-bottom:0">下方可能顯示上次保存的任務，不代表這次選取的題目。請先確認有出現「已匯入」的題目標題與原題內容，再開始審查；若交接失敗，可使用下方「手動匯入」。</p>
+</section>
 <section id="bridge-import-summary" class="panel hidden" aria-live="polite" style="margin-top:18px;border-color:#b5d2d5;background:#f2faf7">
 <strong style="display:block;margin-bottom:8px">已自動匯入觀護人考古題</strong>
 <div id="bridge-import-title" style="font-size:14px;overflow-wrap:anywhere"></div>
@@ -295,7 +299,7 @@ function showRoundHistory(t){
   entry.append(box,button);hist.append(entry);
  }
 }
-function render(){renderList();const t=selected();
+function render(){renderList();const t=selected();$('bridge-handoff-alert').classList.toggle('hidden',!bridgeEnabled||bridgeReceived);
  const mismatched=bridgeEnabled&&bridgeReceived&&(!t||t.id!==bridgeTaskId);
  $('bridge-task-warning').classList.toggle('hidden',!mismatched);
  if(mismatched){const transferred=state.tasks.find(x=>x.id===bridgeTaskId);$('bridge-task-warning').textContent=transferred?'目前選取的是其他任務。本次送審題目為「'+transferred.title+'」；請按上方「查看已匯入任務」，避免誤用舊題。':'本次送審任務已不存在，請從原題頁重新送交。';}
