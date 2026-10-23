@@ -48,9 +48,9 @@ const {chromium,webkit}=require('playwright');
     await page.locator('#bridge-view-task').click();
     assert.match(await page.locator('#project-title').textContent(),/114年 少年事件處理法 第2題/,'view imported must reselect the actual handoff task');
     assert.equal(await page.locator('#bridge-task-warning').isVisible(),false,'warning disappears for the imported task');
-    const exportRect=await page.locator('#export').boundingBox(),deleteRect=await page.locator('#delete').boundingBox();
-    assert.ok(Math.abs(exportRect.width-deleteRect.width)<2,'export/delete controls have equal widths on iPhone');
-    assert.ok(Math.abs(exportRect.y+exportRect.height-deleteRect.y-deleteRect.height)<2,'export/delete controls align at bottom');
+    const buttons=await page.evaluate(()=>{const a=document.getElementById('export').getBoundingClientRect(),b=document.getElementById('delete').getBoundingClientRect();return {exportWidth:a.width,deleteWidth:b.width,exportBottom:a.bottom,deleteBottom:b.bottom};});
+    assert.ok(Math.abs(buttons.exportWidth-buttons.deleteWidth)<2,'export/delete controls have equal widths on iPhone');
+    assert.ok(Math.abs(buttons.exportBottom-buttons.deleteBottom)<2,'export/delete controls align at bottom');
 
     await page.locator('#review-mode').selectOption('api');
     await page.locator('#api-settings summary').click();
