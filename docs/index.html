@@ -37,7 +37,14 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 /* Keep task actions aligned instead of wrapping the destructive action as a narrow button. */
 .task-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;margin-top:12px}
 .task-action-grid>button{box-sizing:border-box;width:100%;min-width:0;min-height:52px;white-space:normal;overflow-wrap:anywhere;text-align:center}
-@media(max-width:560px){.task-action-grid{grid-template-columns:minmax(0,1fr)}}
+/* Keep Export / Delete equal-width in two columns even on narrow phones. */
+.task-action-grid{align-items:stretch}
+.task-action-grid>button{display:flex;align-items:center;justify-content:center;min-height:64px;padding:10px 7px;line-height:1.45}
+.task-action-grid #bridge-return:not(.hidden){grid-column:1/-1}
+.task-toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,auto);align-items:end;gap:12px}
+.task-toolbar #task-meta{overflow-wrap:anywhere;min-width:0}
+#bridge-task-warning{color:#94542f;font-weight:700;background:#fff6e9;border:1px solid #e7cfb7;padding:10px 12px;border-radius:9px}
+@media(max-width:750px){.task-toolbar{grid-template-columns:minmax(0,1fr)}.task-action-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0}}
 </style>
 </head>
 <body>
@@ -57,7 +64,7 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 <details><summary style="cursor:pointer;font-weight:700">檢查帶入的原題與答案</summary><div id="bridge-import-text" class="view" style="margin-top:10px;max-height:300px"></div></details>
 <button id="bridge-view-task" class="secondary" type="button" style="margin-top:12px;width:100%">查看已匯入任務</button>
 </section>
-<details class="panel" style="margin-top:18px" id="manual-handoff"><summary style="cursor:pointer;font-weight:700">題目未自動帶入？手動匯入（iPhone 備援）</summary>
+<details class="panel" style="margin-top:18px" id="manual-handoff"><summary style="cursor:pointer;font-weight:700">題目未自動帶入？手動匯入</summary>
 <p class="sub">請在觀護人學習平臺考古題的 AI 批改區按「複製題目與答案供雙 AI 匯入」，再回到這裡貼上。內容只在本機解析，不會因此呼叫任何 AI。</p>
 <div class="field"><label for="handoff-paste">題目交接資料</label><textarea id="handoff-paste" rows="4" maxlength="85000" placeholder="貼上從考古題複製的交接資料（JSON）"></textarea></div>
 <button id="handoff-import" type="button" style="width:100%">匯入題目及答案</button>
@@ -89,7 +96,8 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 <div class="row between"><h2 id="project-title">選取或建立任務</h2><span class="pill" id="project-status">尚未選取</span></div>
 <div id="empty-state" class="sub empty-guide"><div class="empty-icon" aria-hidden="true">↔</div><strong>從你的第一個任務開始</strong><p>在左側填入交辦指令與文件，建立任務。<br>按「開始本回合」，依提示複製到 AI 網頁並貼回回覆，即可開始雙 AI 討論。</p></div>
 <div id="project-content" class="hidden">
-<div class="row between"><div class="sub" id="task-meta"></div><div class="task-action-grid"><button id="bridge-return" type="button" class="secondary small hidden">回傳雙 AI 意見至學習平臺</button><button id="export" type="button" class="secondary small">匯出紀錄（MD）</button><button id="delete" type="button" class="danger small">刪除任務</button></div></div>
+<div class="task-toolbar"><div class="sub" id="task-meta"></div><div class="task-action-grid"><button id="bridge-return" type="button" class="secondary small hidden">回傳雙 AI 意見至學習平臺</button><button id="export" type="button" class="secondary small">匯出紀錄（MD）</button><button id="delete" type="button" class="danger small">刪除任務</button></div></div>
+<p id="bridge-task-warning" class="sub hidden" role="alert"></p>
 <p id="bridge-status" class="sub" role="status" aria-live="polite"></p><h3 style="margin-top:18px">原始交辦（唯讀）</h3><div id="original" class="view"></div>
 <h3 style="margin-top:18px">文件擷取文字（唯讀）</h3><div id="source" class="view"></div>
 <div class="divider"></div>
@@ -287,7 +295,11 @@ function showRoundHistory(t){
   entry.append(box,button);hist.append(entry);
  }
 }
-function render(){renderList();const t=selected();$('bridge-return').classList.toggle('hidden',!bridgeEnabled||!t||t.id!==bridgeTaskId);$('empty-state').classList.toggle('hidden',!!t);$('project-content').classList.toggle('hidden',!t);if(!t){$('project-title').textContent='選取或建立任務';$('project-status').textContent='尚未選取';return;}
+function render(){renderList();const t=selected();
+ const mismatched=bridgeEnabled&&bridgeReceived&&(!t||t.id!==bridgeTaskId);
+ $('bridge-task-warning').classList.toggle('hidden',!mismatched);
+ if(mismatched){const transferred=state.tasks.find(x=>x.id===bridgeTaskId);$('bridge-task-warning').textContent=transferred?'目前選取的是其他任務。本次送審題目為「'+transferred.title+'」；請按上方「查看已匯入任務」，避免誤用舊題。':'本次送審任務已不存在，請從原題頁重新送交。';}
+ $('bridge-return').classList.toggle('hidden',!bridgeEnabled||!t||t.id!==bridgeTaskId);$('empty-state').classList.toggle('hidden',!!t);$('project-content').classList.toggle('hidden',!t);if(!t){$('project-title').textContent='選取或建立任務';$('project-status').textContent='尚未選取';return;}
  $('project-title').textContent=t.title;$('project-status').textContent=statuses[t.status];$('task-meta').textContent=`分類：${t.category}　|　建立：${t.createdAt.slice(0,10)}　|　${t.rounds.length} 回合`;
  $('original').textContent=t.instruction;$('source').textContent=t.documentText||'（未提供文件文字）';$('begin').disabled=!['new','needs_rework'].includes(t.status);
  const s=currentStep(t),r=last(t),completed=r?.outputs.length||0;
@@ -449,7 +461,7 @@ $('bridge-return').addEventListener('click',()=>{
  }catch(e){notice(e.message);}
 });
 
-$('bridge-view-task').addEventListener('click',()=>{$('project-content').scrollIntoView({behavior:'smooth',block:'start'});});
+$('bridge-view-task').addEventListener('click',()=>{const task=state.tasks.find(x=>x.id===bridgeTaskId);if(!task){notice('本次匯入任務已不存在，請重新送交');return;}state.selectedId=task.id;save();render();$('project-pane').scrollIntoView({behavior:'smooth',block:'start'});});
 setupSlots();
 // Operation mode is view-only and resets to manual on every page load.
 function updateReviewMode(){
