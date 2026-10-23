@@ -33,7 +33,12 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 @media(max-width:1000px){.layout{grid-template-columns:290px minmax(0,1fr)}main{padding:24px}.intro-mark{display:none}}
 @media(max-width:850px){.layout{grid-template-columns:1fr}.panel{padding:20px}.intro h2{font-size:26px}.workflow-strip>div{padding:13px 12px;gap:8px}.workflow-strip small{display:none}}
 @media(max-width:500px){main{padding:18px 14px 45px}.intro{padding:25px 0 20px}.intro h2{font-size:23px}.intro p{font-size:13px}.top h1{font-size:18px}.top .sub{font-size:11px}.workflow-strip strong{font-size:12px}.workflow-strip>div{padding:12px 9px;gap:6px}.top>.row{width:100%;justify-content:flex-end}.panel{padding:18px}.workflow-strip{margin-bottom:16px}}
-.api-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}.api-actions .field{margin:0}.api-actions #api-limit{width:100%;max-width:220px}#api-slots .lane>button[id^="test-"]{display:block;width:100%;min-height:46px;text-align:center}@media(max-width:500px){.api-actions{grid-template-columns:minmax(0,1fr)}.api-actions #api-limit{max-width:none}.api-actions #clear-keys{width:100%}}</style>
+.api-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}.api-actions .field{margin:0}.api-actions #api-limit{width:100%;max-width:220px}#api-slots .lane>button[id^="test-"]{display:block;width:100%;min-height:46px;text-align:center}@media(max-width:500px){.api-actions{grid-template-columns:minmax(0,1fr)}.api-actions #api-limit{max-width:none}.api-actions #clear-keys{width:100%}}
+/* Keep task actions aligned instead of wrapping the destructive action as a narrow button. */
+.task-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;margin-top:12px}
+.task-action-grid>button{box-sizing:border-box;width:100%;min-width:0;min-height:52px;white-space:normal;overflow-wrap:anywhere;text-align:center}
+@media(max-width:560px){.task-action-grid{grid-template-columns:minmax(0,1fr)}}
+</style>
 </head>
 <body>
 <main>
@@ -84,7 +89,7 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 <div class="row between"><h2 id="project-title">選取或建立任務</h2><span class="pill" id="project-status">尚未選取</span></div>
 <div id="empty-state" class="sub empty-guide"><div class="empty-icon" aria-hidden="true">↔</div><strong>從你的第一個任務開始</strong><p>在左側填入交辦指令與文件，建立任務。<br>按「開始本回合」，依提示複製到 AI 網頁並貼回回覆，即可開始雙 AI 討論。</p></div>
 <div id="project-content" class="hidden">
-<div class="row between"><div class="sub" id="task-meta"></div><div class="row"><button id="bridge-return" type="button" class="secondary small hidden">回傳雙 AI 意見至學習平臺</button><button id="export" type="button" class="secondary small">匯出紀錄（MD）</button><button id="delete" type="button" class="danger small">刪除任務</button></div></div>
+<div class="row between"><div class="sub" id="task-meta"></div><div class="task-action-grid"><button id="bridge-return" type="button" class="secondary small hidden">回傳雙 AI 意見至學習平臺</button><button id="export" type="button" class="secondary small">匯出紀錄（MD）</button><button id="delete" type="button" class="danger small">刪除任務</button></div></div>
 <p id="bridge-status" class="sub" role="status" aria-live="polite"></p><h3 style="margin-top:18px">原始交辦（唯讀）</h3><div id="original" class="view"></div>
 <h3 style="margin-top:18px">文件擷取文字（唯讀）</h3><div id="source" class="view"></div>
 <div class="divider"></div>
