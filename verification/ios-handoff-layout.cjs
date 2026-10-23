@@ -45,6 +45,7 @@ const {chromium,webkit}=require('playwright');
     assert.match(await page.locator('#handoff-message').textContent(),/已匯入並儲存/);
     assert.equal(await page.locator('#handoff-paste').inputValue(),'','manual payload cleared after import');
 
+    await page.locator('#review-mode').selectOption('api');
     await page.locator('#api-settings summary').click();
     for(const id of ['test-chatgpt','test-gemini']){
      const rect=await page.locator('#'+id).boundingBox(),field=await page.locator('#model-'+id.split('-')[1]).boundingBox();
