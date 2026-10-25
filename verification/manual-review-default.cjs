@@ -48,7 +48,7 @@ const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const
      }));
     },{nonce});
     await page.goto(origin+'/#psd-bridge='+nonce,{waitUntil:'domcontentloaded'});
-    await page.locator('#bridge-import-summary:not(.hidden)').waitFor();
+    await page.waitForFunction(()=>document.getElementById('project-title').textContent.includes('114年'));
     const external=[];
     page.on('request',request=>{if(!request.url().startsWith(origin))external.push(request.url());});
     assert.equal(await page.locator('#review-mode').inputValue(),'manual');
