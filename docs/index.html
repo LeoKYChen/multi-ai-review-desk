@@ -398,9 +398,9 @@ $('import-json').addEventListener('change',async e=>{const file=e.target.files?.
 $('delete').addEventListener('click',()=>{const t=selected();if(!t)return;if(!confirm(`確定刪除「${t.title}」及全部回合嗎？此操作不可復原，建議先備份。`))return;state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=state.tasks[0]?.id||null;save();render();notice('已刪除任務');});
 
 function bridgeSend(kind,extras={}){
- if(!bridgeEnabled||!window.opener)return;
- try{window.opener.postMessage({protocol:BRIDGE_PROTOCOL,kind,nonce:bridgeNonce,...extras},BRIDGE_ORIGIN);}
- catch{ /* 開啟來源可能已關閉，保留本機任務 */ }
+ if(!bridgeEnabled||!window.opener)return false;
+ try{window.opener.postMessage({protocol:BRIDGE_PROTOCOL,kind,nonce:bridgeNonce,...extras},BRIDGE_ORIGIN);return true;}
+ catch{ /* 開啟來源可能已關閉，保留本機任務 */ return false;}
 }
 function reviewForLearning(t){
  const r=last(t);
@@ -475,8 +475,11 @@ $('bridge-return').addEventListener('click',()=>{
  const t=selected();if(!bridgeEnabled||!t||t.id!==bridgeTaskId){notice('此任務沒有有效的來源連線');return;}
  try{
   const result=reviewForLearning(t);
-  localStorage.setItem(bridgeReturnKey,JSON.stringify({nonce:bridgeNonce,text:result,createdAt:Date.now()}));
-  bridgeSend('return',{text:result});
+  // Either channel reaches the platform; a full storage quota must not block the direct message.
+  let stored=false;
+  try{localStorage.setItem(bridgeReturnKey,JSON.stringify({nonce:bridgeNonce,text:result,createdAt:Date.now()}));stored=true;}catch{}
+  const sent=bridgeSend('return',{text:result});
+  if(!stored&&!sent)throw Error('無法回傳：原練習頁面已關閉，且本機儲存空間無法寫入。請先「匯出紀錄（MD）」保存');
   $('bridge-status').textContent='已送出回傳請求，請在原本的學習平臺視窗確認是否保存。';
  }catch(e){notice(e.message);}
 });

@@ -11,7 +11,8 @@ assert(html.includes('bridgeNonce')&&html.includes('d.nonce!==bridgeNonce'),'che
 assert(html.includes('state.tasks.length>=100'),'preserve task limit');
 assert(html.includes('if(!save()){state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=oldId;'),'rollback failed task creation by id');
 assert(html.includes('r.outputs.length!==6'),'return only complete cross-review');
-assert(html.includes("bridgeSend('return',{text:result})"));
+assert(html.includes("const sent=bridgeSend('return',{text:result})"));
+assert(html.includes('if(!stored&&!sent)throw Error('),'storage failure must not block the direct message');
 const extract=html.match(/function reviewForLearning\(t\)\{([\s\S]*?)\n\}\nwindow\.addEventListener/);
 assert(extract,'return serializer is available');
 const serializer=vm.runInNewContext('function reviewForLearning(t){'+extract[1]+'\n};reviewForLearning',{

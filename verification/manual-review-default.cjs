@@ -23,7 +23,7 @@ const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{
   const origin='http://127.0.0.1:'+server.address().port;
-  for(const [engine,name] of [[chromium,'Chromium'],[webkit,'WebKit']]){
+  for(const [engine,name] of [[chromium,'Chromium'],[webkit,'WebKit']].filter(([,n])=>!process.env.PW_ENGINES||process.env.PW_ENGINES.toLowerCase().includes(n.toLowerCase()))){
    const browser=await engine.launch({headless:true,...(name==='Chromium'?{args:['--no-sandbox']}: {})});
    try{
     const context=await browser.newContext({viewport:{width:390,height:844}});
@@ -99,6 +99,17 @@ const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const
     },{nonce});
     await page.bringToFront();
     await page.waitForFunction(()=>document.getElementById('bridge-status').textContent.includes('已成功寫回'));
+    // A full storage quota must neither block the direct message nor claim success when nothing was sent.
+    await page.evaluate(()=>{window.__setItem=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(String(k).startsWith('psd-dual-ai-return:'))throw new DOMException('full','QuotaExceededError');return window.__setItem.call(this,k,v);};});
+    await page.evaluate(()=>{window.__posted=[];Object.defineProperty(window,'opener',{configurable:true,value:{postMessage:m=>window.__posted.push(m)}});});
+    await page.locator('#bridge-return').click();
+    assert.equal(await page.evaluate(()=>window.__posted.filter(m=>m.kind==='return'&&m.text.includes('人工核定')).length),1,'direct message still sent when storage write fails');
+    assert.match(await page.locator('#bridge-status').textContent(),/已送出回傳請求/);
+    await page.evaluate(()=>{Object.defineProperty(window,'opener',{configurable:true,value:null});document.getElementById('bridge-status').textContent='';});
+    await page.locator('#bridge-return').click();
+    assert.match(await page.locator('#toast').textContent(),/無法回傳/,'both channels failing is reported');
+    assert.equal(await page.locator('#bridge-status').textContent(),'','no false success message');
+    await page.evaluate(()=>{Storage.prototype.setItem=window.__setItem;});
     const completed=await page.evaluate(()=>JSON.parse(localStorage.getItem('multi-ai-v0.8-offline-data')));
     await page.locator('#review-mode').selectOption('api');
     await page.reload({waitUntil:'domcontentloaded'});
