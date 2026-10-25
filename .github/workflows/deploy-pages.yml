@@ -17,7 +17,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Never publish a page that fails the browser acceptance checks.
+  test:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - run: node verification/dual-ai-handoff.cjs
+      - run: npm install --no-save --no-package-lock playwright@1.56.1
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node verification/ios-handoff-layout.cjs
+      - run: node verification/manual-review-default.cjs
+      - run: node verification/multi-tab-sync.cjs
+
   deploy:
+    needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

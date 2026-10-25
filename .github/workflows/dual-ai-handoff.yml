@@ -1,6 +1,7 @@
 name: Dual AI learning handoff
 on:
   push:
+    branches: [main]
     paths:
       - 'docs/index.html'
       - 'verification/dual-ai-handoff.cjs'
