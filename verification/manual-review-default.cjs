@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const http=require('node:http');
 const path=require('node:path');
 const {chromium,webkit}=require('playwright');
+const {readState}=require('./idb-state.cjs');
 // Existing restore marks all outputs imported_unverified and keeps binding on participants.
 const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const t of copy.tasks)for(const r of t.rounds)for(const o of r.outputs){delete o.source;delete o.service;delete o.model;delete o.number;}return copy;};
 
@@ -37,7 +38,7 @@ const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const
     });
     const nonce='b'.repeat(32);
     await page.addInitScript(({nonce})=>{
-     if(localStorage.getItem('multi-ai-v0.8-offline-data'))return; // Do not reseed a completed import after reload.
+     if(sessionStorage.getItem('seeded'))return;sessionStorage.setItem('seeded','1'); // Do not reseed a completed import after reload.
      localStorage.setItem('psd-dual-ai-handoff:'+nonce,JSON.stringify({
       nonce,createdAt:Date.now(),
       payload:{
@@ -71,12 +72,12 @@ const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const
      assert.match(await page.locator('#progress-label').textContent(),new RegExp(i+'／6'));
     }
     assert.deepEqual(external,[],'manual flow sends no external requests');
-    const before=await page.evaluate(()=>localStorage.getItem('multi-ai-v0.8-offline-data'));
+    const before=JSON.stringify(await readState(page));
     await page.locator('#review-mode').selectOption('api');
     assert.equal(await page.locator('#api-settings').isVisible(),true);
     await page.locator('#review-mode').selectOption('manual');
     assert.equal(await page.locator('#api-settings').isVisible(),false);
-    assert.equal(await page.evaluate(()=>localStorage.getItem('multi-ai-v0.8-offline-data')),before,'mode switches preserve source and all six opinions');
+    assert.equal(JSON.stringify(await readState(page)),before,'mode switches preserve source and all six opinions');
     assert.match(await page.locator('#project-status').textContent(),/待人工核定/);
     await page.locator('#bridge-return').click();
     assert.equal(await page.evaluate(key=>localStorage.getItem(key),returnKey),null,'no return before human decision');
@@ -99,11 +100,11 @@ const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const
     },{nonce});
     await page.bringToFront();
     await page.waitForFunction(()=>document.getElementById('bridge-status').textContent.includes('已成功寫回'));
-    const completed=await page.evaluate(()=>JSON.parse(localStorage.getItem('multi-ai-v0.8-offline-data')));
+    const completed=await readState(page);
     await page.locator('#review-mode').selectOption('api');
     await page.reload({waitUntil:'domcontentloaded'});
     assert.equal(await page.locator('#review-mode').inputValue(),'manual','reload always defaults to manual');
-    assert.deepEqual(reviewContent(await page.evaluate(()=>JSON.parse(localStorage.getItem('multi-ai-v0.8-offline-data')))),reviewContent(completed),'completed review and original answer survive reload');
+    assert.deepEqual(reviewContent(await readState(page)),reviewContent(completed),'completed review and original answer survive reload');
     assert.match(await page.locator('#reader-count').textContent(),/共 1 回合/);
     assert.match(await page.locator('#source').textContent(),/【我的答案】/);
     // Exercise all six automatic API steps with intercepted responses. No real API keys or paid calls.
@@ -140,18 +141,18 @@ const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const
     assert.equal(calls.filter(x=>x.provider==='openai').length,3);
     assert.equal(calls.filter(x=>x.provider==='gemini').length,3);
     assert.ok(calls.every(x=>x.input.includes('測試題幹及答案')),'every AI step includes the source question');
-    const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('multi-ai-v0.8-offline-data')));
+    const saved=await readState(page);
     const task=saved.tasks.find(x=>x.title==='模擬 API 六階段測試');
     assert.equal(task.rounds[0].outputs.length,6,'mocked outputs saved');
     assert.equal(task.rounds[0].participants.chatgpt.service,'openai');
     assert.equal(task.rounds[0].participants.gemini.service,'gemini');
     assert.ok(!JSON.stringify(saved).includes('test-only-openai')&&!JSON.stringify(saved).includes('test-only-gemini'),'API keys must not be persisted');
     await page.locator('#review-mode').selectOption('manual');
-    const apiSaved=await page.evaluate(()=>JSON.parse(localStorage.getItem('multi-ai-v0.8-offline-data')));
+    const apiSaved=await readState(page);
     await page.reload({waitUntil:'domcontentloaded'});
     assert.equal(await page.locator('#review-mode').inputValue(),'manual');
     assert.equal(await page.locator('#api-settings').isVisible(),false);
-    assert.deepEqual(reviewContent(await page.evaluate(()=>JSON.parse(localStorage.getItem('multi-ai-v0.8-offline-data')))),reviewContent(apiSaved),'API participants and completed outputs preserved');
+    assert.deepEqual(reviewContent(await readState(page)),reviewContent(apiSaved),'API participants and completed outputs preserved');
     await page.locator('#review-mode').selectOption('api');
     const selector=await page.locator('#review-mode').boundingBox();
     assert.ok(selector.x>=0&&selector.x+selector.width<=392,'mode selector fits mobile viewport');

@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="description" content="預設手動審查的雙 AI 協作工作臺：獨立分析、交叉評論、修訂與人工核定，紀錄保存在你的瀏覽器。">
-<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.14 手動審查版</title>
+<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.15 手動審查版</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;color-scheme:light;--bg:#f2f5f8;--ink:#172b40;--muted:#607385;--accent:#2a648f;--border:#dce5ee;--success:#20704a;--warn:#9c501c}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:1260px;margin:auto;padding:22px 20px 70px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px}.identity{display:flex;align-items:center;gap:12px}.symbol{background:#1e3b56;color:white;border-radius:11px;padding:12px 15px;font-size:19px}h1{font-size:24px;margin:0}h2{font-size:19px;margin:0 0 16px}h3{font-size:16px;margin:0 0 12px}p{line-height:1.65}.sub{color:var(--muted);font-size:13px;line-height:1.6}.pill{font-size:12px;background:#e6f2f6;color:#215a78;border-radius:15px;padding:7px 11px;white-space:nowrap}.pill.good{background:#e5f4e9;color:var(--success)}.pill.bad{background:#fff0e7;color:var(--warn)}.warning{margin-top:19px;border:1px solid #f0d5a8;background:#fff7e9;border-radius:12px;padding:13px 16px;font-size:13px;line-height:1.7}.layout{display:grid;grid-template-columns:365px minmax(0,1fr);gap:18px;margin-top:20px}.panel{background:white;border:1px solid var(--border);border-radius:15px;padding:22px;box-shadow:0 2px 12px #152e3b08}.field{display:grid;gap:7px;margin-bottom:15px}label{font-weight:700;font-size:13px}input,textarea,select{font:inherit;font-size:14px;border-radius:9px;border:1px solid #bfcfdb;padding:11px 12px;color:#1c2d3c;background:#fcfdff;width:100%;outline-color:var(--accent)}textarea{resize:vertical;line-height:1.6}button{font:inherit;font-size:13px;font-weight:700;border:1px solid #284963;background:#284963;color:#fff;padding:10px 14px;border-radius:9px;cursor:pointer}button:hover{filter:brightness(1.10)}button:disabled{opacity:.5;cursor:not-allowed}button.secondary{background:white;color:#284963;border-color:#bccddb}button.danger{background:white;color:#a14135;border-color:#e7bab7}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.small{font-size:12px}.hidden{display:none!important}.divider{border-top:1px solid var(--border);margin:18px 0}.board{display:grid;grid-template-columns:1fr 1fr;gap:12px}.lane{padding:15px;border-radius:12px;border:1px solid var(--border);min-width:0}.lane h3{padding-bottom:10px;border-bottom:1px solid var(--border)}.stage{background:#f7fafc;border-radius:9px;padding:12px;margin:9px 0}.stage .title{font-size:12px;font-weight:750;color:#2c5c7f;margin-bottom:7px}.stage .body{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;max-height:260px;overflow:auto}.view{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;background:#f7fafc;padding:14px;border-radius:10px;max-height:190px;overflow:auto}.step{border:1px solid #b8d8eb;background:#f6fbff;border-radius:13px;padding:17px;margin-bottom:16px}.history{font-size:13px;color:#475c6a;line-height:1.8}.notice{position:fixed;bottom:20px;right:20px;padding:12px 16px;background:#17384b;color:#fff;border-radius:10px;max-width:440px;box-shadow:0 4px 24px #0002;font-size:13px;z-index:30}.count{color:#2c6488;font-weight:750;font-size:12px}.button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.button-row button{flex:1}#project-pane{min-width:0}.tasks{display:grid;gap:8px;max-height:300px;overflow:auto;margin:12px 0}.task{display:block;text-align:left;width:100%;background:#fff;color:var(--ink);border:1px solid var(--border);padding:11px 12px;font-weight:400}.task.active{background:#edf7fc;border-color:var(--accent)}.task strong,.task small{display:block;word-break:break-word}.task small{font-size:11px;color:var(--muted);margin-top:5px}.task-head{font-size:14px}.progress{height:7px;background:#e3ebf1;border-radius:9px;overflow:hidden;margin:9px 0 16px}.progress div{background:#2c719e;height:100%;transition:width .2s}.bar{background:#fbfcfe;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:18px}.button-row.inline{justify-content:flex-end}.button-row.inline button{flex:unset}.list-title{margin-top:18px;font-size:14px}.muted-small{font-size:12px;color:var(--muted);line-height:1.6}.word-label{font-size:12px;color:var(--success)}.link{color:var(--accent);text-decoration:none}.link:hover{text-decoration:underline}
@@ -48,7 +48,7 @@ main{max-width:1440px;padding:28px 36px 70px}.top{padding:0 0 23px;border-color:
 </head>
 <body>
 <main>
-<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">手動複製貼回 · 六階段審查 · 本機保存</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.14 · 預設手動審查</span></div></header>
+<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">手動複製貼回 · 六階段審查 · 本機保存</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.15 · 預設手動審查</span></div></header>
 <section class="intro"><div><div class="eyebrow">MULTI-AI REVIEW / YOUR WORKSPACE</div><h2>兩個 AI 協作，最後由你決定。</h2><p>從一份文件或一個問題開始，讓不同觀點彼此檢驗，留下可回查的討論與決定。</p></div><div class="intro-mark">獨立思考 · 交互檢驗 · 人工核定</div></section>
 <div class="workflow-strip" aria-label="工作流程"><div><span>01</span><div><strong>分別分析</strong><small>兩家模型各自提出初稿</small></div></div><div><span>02</span><div><strong>交叉審查</strong><small>交換觀點，找出缺漏</small></div></div><div><span>03</span><div><strong>修訂與核定</strong><small>各自修訂，由你決定</small></div></div></div>
 <div class="warning">任務儲存在這個瀏覽器（未加密），請定期備份 JSON。預設手動審查，不需 API 金鑰：複製提示詞到對應 AI 網頁，再貼回完整回覆。請自行確認可傳送的資料範圍。</div>
@@ -186,13 +186,13 @@ async function runAPI(all){
  if(r.participants){for(const p of providers){if(r.participants[p].service!==configs[p].service||r.participants[p].model!==configs[p].model)throw Error('本回合服務／模型已固定，請將設定調回：'+providers.map(x=>label(t,x)).join('、'));}}
  else if(r.outputs.length)throw Error('此回合已有舊版／手動回覆，請以手動方式完成；新回合可使用 API');
  const count=all?6-r.outputs.length:1;if(!confirm(`將向 ${services[configs.chatgpt.service].name} 與 ${services[configs.gemini.service].name} 中對應的服務傳送文件及相關意見，最多生成 ${count} 次回覆（每次輸出上限 ${limit} tokens），可能計費。開始？`))return;
- r.participants=Object.fromEntries(providers.map(p=>[p,{service:configs[p].service,model:configs[p].model}]));if(!save())throw Error('本機保存不可用，請先備份並啟用本機儲存後再執行');stopRequested=false;render();setBusy(true);
+ r.participants=Object.fromEntries(providers.map(p=>[p,{service:configs[p].service,model:configs[p].model}]));if(!await save())throw Error('本機保存不可用，請先備份並啟用本機儲存後再執行');stopRequested=false;render();setBusy(true);
  for(let i=0;i<count;i++){if(stopRequested)break;const s=currentStep(t);if(!s)break;apiStatus(`第 ${s.number}/6 步：${label(t,s.provider)} · ${names[s.phase]}，正在等待回覆…`);const result=await generate(configs[s.provider],promptFor(t,s),limit);if(stopRequested)break;
- r.outputs.push({...s,body:result.text,source:'api',service:configs[s.provider].service,model:configs[s.provider].model,createdAt:iso()});t.updatedAt=iso();if(!currentStep(t))t.status='awaiting_human';const ok=save();setBusy(false);render();setBusy(true);if(!ok)throw Error('回覆仍在本頁，但本機儲存失敗；已暫停後續呼叫，請立即備份 JSON');}
+ r.outputs.push({...s,body:result.text,source:'api',service:configs[s.provider].service,model:configs[s.provider].model,createdAt:iso()});t.updatedAt=iso();if(!currentStep(t))t.status='awaiting_human';const ok=await save();setBusy(false);render();setBusy(true);if(!ok)throw Error('回覆仍在本頁，但本機儲存失敗；已暫停後續呼叫，請立即備份 JSON');}
  apiStatus(stopRequested?'已停止；可從缺少回覆繼續。':t.status==='awaiting_human'?'六份意見完成，請由你做最終審查。':'此步驟已完成，可繼續下一步。');
  }catch(e){apiStatus('已暫停：'+e.message+'。已完成回覆會保留，不會自動重試。');}finally{setBusy(false);
  // A round is only locked to a service/model after a reply is stored, so a mistyped model can be corrected.
- if(!wasBound&&r.participants&&!r.outputs.length){delete r.participants;save();render();}}
+ if(!wasBound&&r.participants&&!r.outputs.length){delete r.participants;await save();render();}}
 }
 const currentStep=t=>{const r=last(t);if(!r||r.review)return null;for(const phase of phases)for(const provider of providers)if(!r.outputs.some(x=>x.phase===phase&&x.provider===provider))return {phase,provider,number:r.outputs.length+1};return null;};
 const get=(t,p,who)=>last(t)?.outputs.find(x=>x.phase===p&&x.provider===who)?.body||'';
@@ -207,11 +207,14 @@ function promptFor(t,s){
  return text+`\n\n【第三階段：個別最終修正建議】你是 ${label(t,s.provider)}，請逐項回應對方對你初稿的批評：採納／不採納／保留待查證，並說明理由。接著提出完整修訂建議、與初稿的差異，以及仍待人工核定的爭點。保留有依據的不同見解，不強求一致；兩個 AI 同意也不代表已核實。請提供建議稿，勿覆寫交辦原文，也不要替人類結案。`;
 }
 function showStorage(ok,msg){storageOK=ok;const badge=$('storage-state');badge.className='pill '+(ok?'good':'bad');badge.textContent=msg||(ok?'已自動儲存於本機':'本機儲存不可用');}
-// Several desk tabs share one storage key (each bridge handoff opens a new window), so merge per task
-// instead of overwriting: the newer updatedAt wins; a task missing on one side and unchanged on the other was deleted.
-let syncedAt=new Map();
+// Storage: IndexedDB, one record per task, so the desk no longer fills the ~5 MB localStorage quota it shares
+// with the learning platform. localStorage remains the fallback where IndexedDB cannot be opened.
+// Several desk tabs may be open (each bridge handoff opens a window), so saves merge per task:
+// the newer updatedAt wins; a task missing on one side and unchanged on the other was deleted.
+const DB_NAME='multi-ai-review-desk',SELECTED_KEY='multi-ai-selected-task';
+const channel=typeof BroadcastChannel==='function'?new BroadcastChannel(DB_NAME):null;
+let db=null,syncedAt=new Map();
 const remember=s=>{syncedAt=new Map(s.tasks.map(t=>[t.id,t.updatedAt]));};
-function readStored(){const raw=localStorage.getItem(STORAGE_KEY);return raw?cleanImported(JSON.parse(raw),{trusted:true}):null;}
 function mergeTasks(disk){
  if(!disk)return state.tasks;
  const mine=new Map(state.tasks.map(t=>[t.id,t])),out=[];
@@ -220,9 +223,29 @@ function mergeTasks(disk){
  return out;
 }
 function adopt(tasks){state={...state,tasks};if(!tasks.some(t=>t.id===state.selectedId))state.selectedId=tasks[0]?.id||null;}
-function save({replace=false}={}){
- try{if(!replace){let disk=null;try{disk=readStored();}catch{}adopt(mergeTasks(disk));}
- localStorage.setItem(STORAGE_KEY,JSON.stringify(state));remember(state);showStorage(true,'已自動儲存於本機');return true;}
+function openDB(){return new Promise((resolve,reject)=>{
+ if(typeof indexedDB==='undefined'||!indexedDB)return reject(Error('IndexedDB 不可用'));
+ const timer=setTimeout(()=>reject(Error('IndexedDB 開啟逾時')),4000);
+ try{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore('tasks',{keyPath:'id'});req.onsuccess=()=>{clearTimeout(timer);if(req.result.objectStoreNames.contains('tasks'))resolve(req.result);else{req.result.close();reject(Error('IndexedDB 結構不完整'));}};req.onerror=()=>{clearTimeout(timer);reject(req.error);};}
+ catch(e){clearTimeout(timer);reject(e);}
+});}
+const done=tx=>new Promise((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onerror=tx.onabort=()=>reject(tx.error||Error('IndexedDB 交易失敗'));});
+function readDB(){return new Promise((resolve,reject)=>{const req=db.transaction('tasks').objectStore('tasks').getAll();req.onsuccess=()=>{try{resolve(cleanImported({version:8,tasks:req.result},{trusted:true}));}catch(e){reject(e);}};req.onerror=()=>reject(req.error);});}
+async function saveDB(replace){
+ const tx=db.transaction('tasks','readwrite'),store=tx.objectStore('tasks'),finished=done(tx);
+ if(replace){store.clear();for(const t of state.tasks)store.put(t);remember(state);}
+ // Merge inside the transaction: IndexedDB serialises read-write transactions across tabs.
+ else{const req=store.getAll();req.onsuccess=()=>{const disk=new Map(req.result.map(t=>[t.id,t]));adopt(mergeTasks({tasks:req.result}));
+  for(const t of state.tasks)if(disk.get(t.id)?.updatedAt!==t.updatedAt||!disk.has(t.id))store.put(t);
+  const keep=new Set(state.tasks.map(t=>t.id));for(const id of disk.keys())if(!keep.has(id))store.delete(id);remember(state);};}
+ await finished;
+}
+function readStored(){const raw=localStorage.getItem(STORAGE_KEY);return raw?cleanImported(JSON.parse(raw),{trusted:true}):null;}
+function saveLocal(replace){if(!replace){let disk=null;try{disk=readStored();}catch{}adopt(mergeTasks(disk));}localStorage.setItem(STORAGE_KEY,JSON.stringify(state));remember(state);}
+async function save({replace=false}={}){
+ try{if(db)await saveDB(replace);else saveLocal(replace);
+ try{localStorage.setItem(SELECTED_KEY,state.selectedId||'');}catch{}
+ channel?.postMessage('saved');showStorage(true,db?'已自動儲存於本機':'已自動儲存於本機（相容模式）');return true;}
  catch(e){showStorage(false,'儲存失敗，請立即備份 JSON');notice('本機儲存失敗（可能空間不足／停用）。請立即匯出 JSON 備份！');return false;}
 }
 // trusted: this browser's own saved data keeps provenance; external JSON backups are always downgraded.
@@ -251,15 +274,33 @@ function cleanImported(raw,{trusted=false}={}){
  }
  return {version:8,tasks:out,selectedId:ids.has(raw.selectedId)?raw.selectedId:(out[0]?.id||null)};
 }
-function restore(){
- try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)state=cleanImported(JSON.parse(raw),{trusted:true});localStorage.setItem(STORAGE_KEY,JSON.stringify(state));remember(state);showStorage(true,raw?'已恢復本機任務':'已啟用本機自動儲存');}
+async function restore(){
+ try{db=await openDB();}catch{db=null;}
+ if(!db){restoreLocal();return;}
+ try{
+  let disk=await readDB(),legacy=null;
+  // Fold in data saved by earlier versions (or an older tab still open), then free the shared localStorage quota.
+  try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)legacy=cleanImported(JSON.parse(raw),{trusted:true});}catch{}
+  if(legacy){const known=new Map(disk.tasks.map(t=>[t.id,t]));const newer=legacy.tasks.filter(t=>!known.has(t.id)||String(t.updatedAt)>String(known.get(t.id).updatedAt));
+   if(newer.length){const tx=db.transaction('tasks','readwrite'),finished=done(tx);for(const t of newer)tx.objectStore('tasks').put(t);await finished;disk=await readDB();}
+   localStorage.removeItem(STORAGE_KEY);}
+  let sel=null;try{sel=localStorage.getItem(SELECTED_KEY);}catch{}
+  const has=id=>disk.tasks.some(t=>t.id===id);
+  state={version:8,tasks:disk.tasks,selectedId:has(sel)?sel:has(legacy?.selectedId)?legacy.selectedId:disk.tasks[0]?.id||null};remember(disk);
+  showStorage(true,disk.tasks.length?'已恢復本機任務':'已啟用本機自動儲存');
+ }catch(e){showStorage(false,'儲存不可用／無法讀取');notice('本機任務讀取失敗，請使用 JSON 備份還原。');}
+}
+function restoreLocal(){
+ try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)state=cleanImported(JSON.parse(raw),{trusted:true});localStorage.setItem(STORAGE_KEY,JSON.stringify(state));remember(state);showStorage(true,raw?'已恢復本機任務（相容模式）':'已啟用本機自動儲存（相容模式）');}
  catch(e){showStorage(false,'儲存不可用／無法讀取');if(e instanceof DOMException&&e.name==='SecurityError')notice('瀏覽器封鎖本機儲存；可改用 JSON 備份。');else if(localStorageSafe())notice('舊備份讀取失敗，請使用 JSON 備份還原。');}
 }
+function selectTask(id){state.selectedId=id;try{localStorage.setItem(SELECTED_KEY,id);}catch{}if(!db)save();render();}
 function localStorageSafe(){try{return typeof localStorage!=='undefined';}catch{return false;}}
-function mutate(update){update();const t=selected();if(t)t.updatedAt=iso();save();render();}
+// Render before the async save so buttons reflect the new state at once (no double submits).
+async function mutate(update){update();const t=selected();if(t)t.updatedAt=iso();render();const ok=await save();render();return ok;}
 function filteredTasks(){const query=$('search').value.trim().toLocaleLowerCase();const filt=$('status-filter').value;return state.tasks.filter(t=>(filt==='all'||t.status===filt)&&(!query||`${t.title}\n${t.instruction}\n${t.category}`.toLocaleLowerCase().includes(query))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));}
 function renderList(){const root=$('task-list');root.replaceChildren();$('task-count').textContent=`（${state.tasks.length}）`;const xs=filteredTasks();if(!xs.length){root.append(node('div','sub','沒有符合條件的任務。'));return;}
- for(const t of xs){const button=node('button','task'+(t.id===state.selectedId?' active':''));button.type='button';button.append(node('strong','task-head',t.title),node('small','',`${t.importedFrom==='platform'?'來自平臺 · ':''}${t.category} · ${statuses[t.status]} · ${t.rounds.length} 回合`));button.addEventListener('click',()=>{state.selectedId=t.id;save();render();});root.append(button);}}
+ for(const t of xs){const button=node('button','task'+(t.id===state.selectedId?' active':''));button.type='button';button.append(node('strong','task-head',t.title),node('small','',`${t.importedFrom==='platform'?'來自平臺 · ':''}${t.category} · ${statuses[t.status]} · ${t.rounds.length} 回合`));button.addEventListener('click',()=>selectTask(t.id));root.append(button);}}
 function readingRound(t){
  if(reader.taskId!==t.id){reader.taskId=t.id;reader.ordinal=last(t)?.ordinal??null;reader.phase='all';}
  if(!t.rounds.some(r=>r.ordinal===reader.ordinal))reader.ordinal=last(t)?.ordinal??null;
@@ -380,7 +421,7 @@ function wordText(xml){
 }
 async function parseWord(file){if(!file.name.toLowerCase().endsWith('.docx'))throw Error('僅支援 .docx Word 檔案');if(file.size===0||file.size>MAX_DOCX_BYTES)throw Error('Word 檔案須介於 1 位元組與 3 MB 之間');const xml=await unzipWordXml(new Uint8Array(await file.arrayBuffer()));return wordText(xml);}
 
-$('create-form').addEventListener('submit',e=>{e.preventDefault();if(state.tasks.length>=100){notice('最多保存 100 筆任務，請先備份並整理');return;}const title=$('task-title').value.trim(),instruction=$('instruction').value.trim(),documentText=$('document-text').value;if(!title||!instruction){notice('請輸入標題與交辦指令');return;}const t={id:uuid(),title,instruction,documentText,documentName:parsedFileName,category:$('category').value,createdAt:iso(),updatedAt:iso(),status:'new',rounds:[]};state.tasks.push(t);state.selectedId=t.id;save();render();$('task-title').value='';$('instruction').value='';$('document-text').value='';$('word-file').value='';$('word-result').textContent='';parsedFileName='';notice('任務已建立並嘗試儲存至本機。');});
+$('create-form').addEventListener('submit',async e=>{e.preventDefault();if(state.tasks.length>=100){notice('最多保存 100 筆任務，請先備份並整理');return;}const title=$('task-title').value.trim(),instruction=$('instruction').value.trim(),documentText=$('document-text').value;if(!title||!instruction){notice('請輸入標題與交辦指令');return;}const t={id:uuid(),title,instruction,documentText,documentName:parsedFileName,category:$('category').value,createdAt:iso(),updatedAt:iso(),status:'new',rounds:[]};state.tasks.push(t);state.selectedId=t.id;render();$('task-title').value='';$('instruction').value='';$('document-text').value='';$('word-file').value='';$('word-result').textContent='';parsedFileName='';await save();render();notice('任務已建立並嘗試儲存至本機。');});
 $('word-file').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const control=$('create-submit');control.disabled=true;$('word-result').textContent='正在解析 Word 文字…';try{const text=await parseWord(file);$('document-text').value=text;parsedFileName=file.name;$('word-result').textContent=`已擷取 ${text.length.toLocaleString('zh-TW')} 個字元（含段落／表格），不儲存原檔。`;notice('Word 文字已擷取完成，請核對內容，再建立任務。');}catch(err){parsedFileName='';e.target.value='';$('word-result').textContent='擷取失敗：'+err.message;notice('Word 擷取失敗：'+err.message);}finally{control.disabled=false;}});
 $('search').addEventListener('input',renderList);$('status-filter').addEventListener('change',renderList);
 $('reader-round').addEventListener('change',e=>{const t=selected();if(!t)return;const n=Number(e.target.value);if(t.rounds.some(r=>r.ordinal===n)){reader.ordinal=n;showRoundHistory(t);}});
@@ -394,8 +435,8 @@ $('save-answer').addEventListener('click',()=>{const t=selected(),s=currentStep(
 $('save-review').addEventListener('click',()=>{const t=selected();if(t?.status!=='awaiting_human')return;const decision=$('decision').value,note=$('review-note').value.trim();if(decision==='rework'&&!note){notice('退回重議必須填寫具體理由。');return;}mutate(()=>{last(t).review={decision,note,createdAt:iso()};t.status=decision==='rework'?'needs_rework':'closed';});$('review-note').value='';notice(decision==='rework'?'已退回；下一回合會帶入你提出的理由。':'已儲存你的人工決定。');});
 $('export').addEventListener('click',()=>{const t=selected();if(!t)return;download(markdown(t),'multi-ai-review-'+t.id+'.md','text/markdown;charset=utf-8');notice('已下載 Markdown，請妥善保管。');});
 $('export-json').addEventListener('click',()=>{const data={...state,exportedAt:iso(),format:'multi-ai-offline-v0.8'};download(JSON.stringify(data,null,2),'multi-ai-backup-'+new Date().toISOString().slice(0,10)+'.json','application/json;charset=utf-8');notice('已下載全部任務備份（JSON）；檔案未加密。');});
-$('import-json').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;e.target.value='';try{if(file.size>MAX_JSON_BYTES)throw Error('JSON 備份不可超過 8MB');const incoming=cleanImported(JSON.parse(await file.text()));if(!confirm(`確定以備份中的 ${incoming.tasks.length} 筆任務，覆蓋目前 ${state.tasks.length} 筆任務嗎？請先備份舊資料。`))return;state=incoming;save({replace:true});render();notice('JSON 已還原並嘗試保存到本機。');}catch(err){notice('無法還原 JSON：'+err.message);}});
-$('delete').addEventListener('click',()=>{const t=selected();if(!t)return;if(!confirm(`確定刪除「${t.title}」及全部回合嗎？此操作不可復原，建議先備份。`))return;state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=state.tasks[0]?.id||null;save();render();notice('已刪除任務');});
+$('import-json').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;e.target.value='';try{if(file.size>MAX_JSON_BYTES)throw Error('JSON 備份不可超過 8MB');const incoming=cleanImported(JSON.parse(await file.text()));if(!confirm(`確定以備份中的 ${incoming.tasks.length} 筆任務，覆蓋目前 ${state.tasks.length} 筆任務嗎？請先備份舊資料。`))return;state=incoming;await save({replace:true});render();notice('JSON 已還原並嘗試保存到本機。');}catch(err){notice('無法還原 JSON：'+err.message);}});
+$('delete').addEventListener('click',async()=>{const t=selected();if(!t)return;if(!confirm(`確定刪除「${t.title}」及全部回合嗎？此操作不可復原，建議先備份。`))return;state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=state.tasks[0]?.id||null;render();await save();render();notice('已刪除任務');});
 
 function bridgeSend(kind,extras={}){
  if(!bridgeEnabled||!window.opener)return;
@@ -418,8 +459,13 @@ function reviewForLearning(t){
  return result;
 }
 // Platform handoffs and pasted questions become ordinary tasks; only the return button needs the platform.
-function bridgeCreate(payload,{manual=false,category='一般',importedFrom='platform'}={}){
- if(bridgeReceived&&!manual){bridgeSend('created');return true;}
+let bridgeCreating=null;
+function bridgeCreate(payload,options={}){
+ if(options.manual)return createImported(payload,options);
+ if(bridgeCreating){bridgeCreating.then(ok=>{if(ok)bridgeSend('created');});return bridgeCreating;}
+ return bridgeCreating=createImported(payload,options).then(ok=>{if(!ok)bridgeCreating=null;return ok;});
+}
+async function createImported(payload,{manual=false,category='一般',importedFrom='platform'}={}){
  try{
   if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('來源資料格式無效');
   for(const [key,limit] of [['title',180],['instruction',20000],['documentText',50000]]){
@@ -428,8 +474,8 @@ function bridgeCreate(payload,{manual=false,category='一般',importedFrom='plat
   if(state.tasks.length>=100)throw Error('工作臺已達 100 筆任務上限，請先備份整理');
   const t={id:uuid(),title:payload.title,instruction:payload.instruction,documentText:payload.documentText,documentName:'',category,importedFrom,createdAt:iso(),updatedAt:iso(),status:'new',rounds:[]};
   // An automatic handoff never takes over the task the user is looking at.
-  const oldId=state.selectedId;state.tasks.push(t);if(manual||!selected())state.selectedId=t.id;
-  if(!save()){state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=oldId;throw Error('本機空間無法儲存任務');}
+  const oldId=state.selectedId;state.tasks.push(t);if(manual||!selected())state.selectedId=t.id;render();
+  if(!await save()){state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=oldId;render();throw Error('本機空間無法儲存任務');}
   if(!manual){bridgeReceived=true;bridgeTaskId=t.id;$('bridge-status').textContent='此任務來自學習平臺。完成六份意見並人工核定後，可按「回傳雙 AI 意見至學習平臺」；回傳前請保持原練習頁面開啟。';$('handoff-message').textContent='已從學習平臺匯入「'+t.title+'」。';}
   render();
   if(!manual)bridgeSend('created');
@@ -455,7 +501,7 @@ window.addEventListener('message',event=>{
  }
 });
 const IMPORT_INSTRUCTION='請分析下列題目與作答：指出答題的優點、不足、遺漏的爭點，以及具體的修正方式。';
-$('handoff-import').addEventListener('click',()=>{
+$('handoff-import').addEventListener('click',async()=>{
  try{
   const raw=$('handoff-paste').value.trim(),title=$('handoff-title').value.trim(),category=$('handoff-category').value;
   if(!raw)throw Error('請貼上題目與作答內容');
@@ -465,7 +511,7 @@ $('handoff-import').addEventListener('click',()=>{
   let payload,importedFrom='paste';
   if(data?.format==='psd-dual-ai-import-v1'){payload=data.payload&&typeof data.payload==='object'&&!Array.isArray(data.payload)?{...data.payload,...(title?{title}:{})}:null;importedFrom='platform';}
   else{if(raw.length>MAX_TEXT)throw Error('文字超過 50,000 字，請拆分後匯入');payload={title:title||raw.split('\n').map(x=>x.trim()).find(Boolean).slice(0,60),instruction:IMPORT_INSTRUCTION,documentText:raw};}
-  if(bridgeCreate(payload,{manual:true,category,importedFrom})){
+  if(await bridgeCreate(payload,{manual:true,category,importedFrom})){
    $('handoff-paste').value='';$('handoff-title').value='';
    $('handoff-message').textContent='已匯入並儲存為新任務。';
   }
@@ -504,7 +550,7 @@ function sweepBridgeKeys(){
  try{const now=Date.now(),keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^psd-dual-ai-(handoff|return|ack):/.test(k||''))keys.push(k);}
  for(const k of keys){let at=NaN;try{at=JSON.parse(localStorage.getItem(k))?.createdAt;}catch{}if(!Number.isFinite(at)||now-at>BRIDGE_STALE_MS)localStorage.removeItem(k);}}catch{}
 }
-function consumeHandoff(){
+async function consumeHandoff(){
  if(!bridgeEnabled||bridgeReceived)return;
  try{
   const raw=localStorage.getItem(bridgeHandoffKey);if(!raw)return;
@@ -512,13 +558,14 @@ function consumeHandoff(){
   if(item.nonce!==bridgeNonce||!Number.isFinite(item.createdAt)||Date.now()-item.createdAt>120000||Date.now()<item.createdAt-10000){
    localStorage.removeItem(bridgeHandoffKey);$('handoff-message').textContent='題目交接已過期，請從原練習頁重新送出，或直接貼上題目匯入';return;
   }
-  bridgeCreate(item.payload);
+  await bridgeCreate(item.payload);
   if(bridgeReceived)localStorage.removeItem(bridgeHandoffKey);
  }catch(e){$('handoff-message').textContent='無法讀取交接資料：'+e.message;}
 }
+// Another desk tab saved: pull its changes in (an API run in progress merges on its next save instead).
+channel?.addEventListener('message',async()=>{if(!db||apiBusy)return;try{const disk=await readDB();adopt(mergeTasks(disk));remember(disk);render();}catch{}});
 window.addEventListener('storage',event=>{
- // Another desk tab saved: pull its changes in (an API run in progress merges on its next save instead).
- if(event.key!==STORAGE_KEY||!event.newValue||apiBusy)return;
+ if(db||event.key!==STORAGE_KEY||!event.newValue||apiBusy)return;
  try{const disk=cleanImported(JSON.parse(event.newValue),{trusted:true});adopt(mergeTasks(disk));remember(disk);render();}catch{}
 });
 window.addEventListener('storage',event=>{
@@ -530,14 +577,14 @@ window.addEventListener('storage',event=>{
   notice($('bridge-status').textContent);localStorage.removeItem(bridgeAckKey);
  }catch{}
 });
-sweepBridgeKeys();restore();render();if(bridgeEnabled){
- consumeHandoff();
+sweepBridgeKeys();(async()=>{await restore();render();if(!bridgeEnabled)return;
+ await consumeHandoff();
  if(!bridgeReceived){
   $('handoff-message').textContent='正在等待學習平臺傳送題目。若一直沒有出現，請在原題頁重新送出（需在同一瀏覽器開啟），或直接在這裡貼上題目匯入。';
   bridgeSend('ready');
  }
  window.addEventListener('storage',event=>{if(event.key===bridgeHandoffKey)consumeHandoff();});
-}
+})();
 })();
 
 </script>

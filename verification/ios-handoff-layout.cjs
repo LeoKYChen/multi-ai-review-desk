@@ -43,6 +43,7 @@ const {chromium,webkit}=require('playwright');
       title:'113年 心理學 第1題',instruction:'獨立分析心理學概念',documentText:'【原題】測驗效度\\n【我的答案】建構效度'
     }}));
     await page.locator('#handoff-import').click();
+    await page.waitForFunction(()=>document.getElementById('handoff-paste').value==='','import saved');
     assert.match(await page.locator('#project-title').textContent(),/113年 心理學/);
     assert.match(await page.locator('#source').textContent(),/建構效度/);
     assert.match(await page.locator('#handoff-message').textContent(),/已匯入並儲存/);
@@ -53,6 +54,7 @@ const {chromium,webkit}=require('playwright');
     await page.locator('#handoff-category').selectOption('備考');
     await page.locator('#handoff-paste').fill('115年 刑法 第3題\n【我的答案】構成要件該當');
     await page.locator('#handoff-import').click();
+    await page.waitForFunction(()=>document.getElementById('handoff-paste').value==='','import saved');
     assert.equal(await page.locator('#project-title').textContent(),'115年 刑法 第3題');
     assert.equal(await page.locator('#task-category').inputValue(),'備考');
     assert.match(await page.locator('#original').textContent(),/題目與作答/);

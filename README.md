@@ -24,7 +24,7 @@
 - 換網址或裝置前先匯出 JSON，再於新站還原。不要將個人備份、金鑰或未公開文件提交到儲存庫。
 - 法律引用仍需人工查證；這一版不具備即時法源檢索工具。
 - 同時開啟多個工作臺分頁時，各分頁依任務合併儲存（較新的修改優先），不會互相覆蓋；尚未儲存的貼上內容在切換任務後仍保留於該分頁。
-- 本站與觀護人學習平臺同屬 `leokychen.github.io`，共用瀏覽器本機儲存空間。工作臺載入時會清除超過 10 分鐘的雙 AI 交接暫存（平臺本身只接受 2 分鐘內的資料），避免佔用平臺的儲存配額。
+- 任務存在瀏覽器的 IndexedDB（每筆任務一筆紀錄），不再佔用與觀護人學習平臺共用的 localStorage 空間（約 5 MB）。舊版存在 localStorage 的任務會在開啟新版時自動搬入並刪除舊副本；瀏覽器無法使用 IndexedDB 時，自動改回 localStorage（狀態顯示「相容模式」）。工作臺載入時也會清除超過 10 分鐘的雙 AI 交接暫存（平臺本身只接受 2 分鐘內的資料）。
 
 ## GitHub Pages
 
@@ -42,5 +42,6 @@
 - 模擬 API 已涵蓋六階段、失敗續跑、取消、空白／不完整回覆、模型綁定及舊備份還原。
 - v0.13 在原本靜態工作臺上新增預設手動與進階模式切換；尚未在 Pages 網址驗證真實金鑰生成。
 - v0.14：匯入題目不再限定學習平臺格式、分類可自選與修改；多分頁合併儲存、重新整理後保留「API／手動貼入」來源標記、保存未儲存草稿、API 首次呼叫失敗不鎖定模型、顯示服務商錯誤訊息、預設輸出上限調為 12,288 tokens、清理過期交接暫存；Pages 部署前須通過全部瀏覽器驗收。
-- `node verification/multi-tab-sync.cjs`：Chromium / WebKit 檢查上述 v0.14 行為（模擬 API，不使用真實金鑰）。可用 `PW_ENGINES=chromium` 只跑單一瀏覽器。
+- v0.15：任務改存 IndexedDB，自動搬移舊資料；多分頁改以 IndexedDB 交易合併並透過 BroadcastChannel 同步；不支援時退回 localStorage。
+- `node verification/multi-tab-sync.cjs`：Chromium / WebKit 檢查上述 v0.14／v0.15 行為（含舊資料搬移與相容模式）（模擬 API，不使用真實金鑰）。可用 `PW_ENGINES=chromium` 只跑單一瀏覽器。
 - `node verification/manual-review-default.cjs`：Chromium / WebKit 檢查預設手動、進階切換、六階段手動與模擬 API、人工核定、跨頁回寫確認、重載與資料保留；不使用真實金鑰或付費呼叫。延伸 PR #7 測試情境，未修改該 PR。

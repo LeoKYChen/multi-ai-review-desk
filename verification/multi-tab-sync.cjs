@@ -3,6 +3,7 @@
 // and cleanup of stale bridge records. Mocked API only: no real keys or paid calls.
 const assert=require('node:assert/strict'),fs=require('node:fs'),http=require('node:http'),path=require('node:path');
 const playwright=require('playwright');
+const {readState}=require('./idb-state.cjs');
 const KEY='multi-ai-v0.8-offline-data';
 const engines=(process.env.PW_ENGINES||'chromium,webkit').split(',');
 (async()=>{
@@ -21,7 +22,7 @@ const engines=(process.env.PW_ENGINES||'chromium,webkit').split(',');
     const errors=[];
     const open=async()=>{const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());await page.goto(origin+'/',{waitUntil:'domcontentloaded'});return page;};
     const create=async(page,title)=>{await page.locator('#task-title').fill(title);await page.locator('#instruction').fill('測試指令 '+title);await page.locator('#create-submit').click();};
-    const stored=page=>page.evaluate(k=>JSON.parse(localStorage.getItem(k)),KEY);
+    const stored=readState;
     const titles=async page=>(await stored(page)).tasks.map(t=>t.title).sort();
 
     // Stale bridge records are swept on load; fresh ones (an active handoff) are kept.
@@ -92,9 +93,39 @@ const engines=(process.env.PW_ENGINES||'chromium,webkit').split(',');
     assert.equal(bound.outputs[0].source,'api');
     assert.deepEqual(calls,['typo-model','fixed-model']);
     assert.ok(!JSON.stringify(await stored(b)).includes('test-only-'),'API keys must not be persisted');
+    assert.equal(await b.evaluate(k=>localStorage.getItem(k),KEY),null,'tasks are no longer kept in shared localStorage');
     assert.deepEqual(errors,[],'unexpected JS errors in '+name);
     await context.close();
-    console.log(name+': multi-tab merge, drafts, provenance, API binding and bridge cleanup passed');
+
+    // Data saved by earlier versions in localStorage moves into IndexedDB with its provenance, freeing the shared quota.
+    const legacy={version:8,selectedId:'legacy-1',tasks:[{id:'legacy-1',title:'舊版本機任務',instruction:'舊指令',documentText:'',category:'一般',createdAt:'2026-10-01T00:00:00.000Z',updatedAt:'2026-10-01T00:00:00.000Z',status:'running',
+     rounds:[{ordinal:1,startedAt:'2026-10-01T00:00:00.000Z',review:null,participants:{chatgpt:{service:'openai',model:'m-a'},gemini:{service:'gemini',model:'m-b'}},outputs:[{phase:'independent',provider:'chatgpt',body:'舊 API 回覆',source:'api',service:'openai',model:'m-a',createdAt:'2026-10-01T00:00:00.000Z'}]}]}]};
+    const migrate=await browser.newContext();
+    await migrate.addInitScript(([k,v])=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem(k,v);}},[KEY,JSON.stringify(legacy)]);
+    const m=await migrate.newPage();m.on('pageerror',e=>errors.push(e.message));
+    await m.goto(origin+'/',{waitUntil:'domcontentloaded'});
+    await m.waitForFunction(()=>document.getElementById('project-title').textContent==='舊版本機任務');
+    assert.match(await m.locator('#board').textContent(),/API 直接回覆/);
+    const moved=await readState(m);
+    assert.equal(moved.tasks.length,1);assert.equal(moved.tasks[0].rounds[0].outputs[0].source,'api');
+    assert.equal(await m.evaluate(k=>localStorage.getItem(k),KEY),null,'legacy localStorage copy removed after migration');
+    await m.reload({waitUntil:'domcontentloaded'});
+    await m.waitForFunction(()=>document.getElementById('project-title').textContent==='舊版本機任務');
+    await migrate.close();
+
+    // Without IndexedDB the desk falls back to localStorage and still works.
+    const fallback=await browser.newContext();
+    await fallback.addInitScript(()=>Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true}));
+    const f=await fallback.newPage();f.on('pageerror',e=>errors.push(e.message));f.on('dialog',d=>d.accept());
+    await f.goto(origin+'/',{waitUntil:'domcontentloaded'});
+    await create(f,'相容模式任務');
+    await f.waitForFunction(()=>document.getElementById('storage-state').textContent.includes('相容模式'));
+    assert.equal((await f.evaluate(k=>JSON.parse(localStorage.getItem(k)),KEY)).tasks[0].title,'相容模式任務');
+    await f.reload({waitUntil:'domcontentloaded'});
+    assert.match(await f.locator('#task-list').textContent(),/相容模式任務/);
+    await fallback.close();
+    assert.deepEqual(errors,[],'unexpected JS errors in '+name);
+    console.log(name+': multi-tab merge, drafts, provenance, API binding, bridge cleanup, IndexedDB migration and fallback passed');
    }finally{await browser.close();}
   }
  }finally{await new Promise(r=>server.close(r));}
