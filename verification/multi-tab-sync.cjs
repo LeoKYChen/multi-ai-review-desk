@@ -62,6 +62,8 @@ const engines=(process.env.PW_ENGINES||'chromium,webkit').split(',');
     assert.equal(await b.locator('#answer').inputValue(),'尚未儲存的草稿','draft kept across re-renders');
     await b.locator('#save-answer').click();
     assert.equal(await b.locator('#answer').inputValue(),'','next step starts empty');
+    // Saving is async: reading IndexedDB waits for the pending write, so this confirms it committed before reloading.
+    assert.equal((await stored(b)).tasks.find(t=>t.title==='分頁甲任務').rounds[0].outputs.length,1,'reply committed before reload');
 
     // Manual provenance survives a reload instead of turning into "imported".
     await b.reload({waitUntil:'domcontentloaded'});

@@ -233,20 +233,25 @@ const done=tx=>new Promise((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.one
 function readDB(){return new Promise((resolve,reject)=>{const req=db.transaction('tasks').objectStore('tasks').getAll();req.onsuccess=()=>{try{resolve(cleanImported({version:8,tasks:req.result},{trusted:true}));}catch(e){reject(e);}};req.onerror=()=>reject(req.error);});}
 async function saveDB(replace){
  const tx=db.transaction('tasks','readwrite'),store=tx.objectStore('tasks'),finished=done(tx);
- if(replace){store.clear();for(const t of state.tasks)store.put(t);remember(state);}
+ if(replace){store.clear();for(const t of state.tasks)store.put(t);remember(state);tx.commit?.();}
  // Merge inside the transaction: IndexedDB serialises read-write transactions across tabs.
  else{const req=store.getAll();req.onsuccess=()=>{const disk=new Map(req.result.map(t=>[t.id,t]));adopt(mergeTasks({tasks:req.result}));
   for(const t of state.tasks)if(disk.get(t.id)?.updatedAt!==t.updatedAt||!disk.has(t.id))store.put(t);
-  const keep=new Set(state.tasks.map(t=>t.id));for(const id of disk.keys())if(!keep.has(id))store.delete(id);remember(state);};}
+  const keep=new Set(state.tasks.map(t=>t.id));for(const id of disk.keys())if(!keep.has(id))store.delete(id);remember(state);tx.commit?.();};}
  await finished;
 }
 function readStored(){const raw=localStorage.getItem(STORAGE_KEY);return raw?cleanImported(JSON.parse(raw),{trusted:true}):null;}
 function saveLocal(replace){if(!replace){let disk=null;try{disk=readStored();}catch{}adopt(mergeTasks(disk));}localStorage.setItem(STORAGE_KEY,JSON.stringify(state));remember(state);}
+// Saving is asynchronous; leaving the page mid-transaction would abort it, so ask the browser to confirm first.
+let pendingSaves=0;
+window.addEventListener('beforeunload',e=>{if(pendingSaves){e.preventDefault();e.returnValue='';}});
 async function save({replace=false}={}){
+ pendingSaves++;
  try{if(db)await saveDB(replace);else saveLocal(replace);
  try{localStorage.setItem(SELECTED_KEY,state.selectedId||'');}catch{}
  channel?.postMessage('saved');showStorage(true,db?'已自動儲存於本機':'已自動儲存於本機（相容模式）');return true;}
  catch(e){showStorage(false,'儲存失敗，請立即備份 JSON');notice('本機儲存失敗（可能空間不足／停用）。請立即匯出 JSON 備份！');return false;}
+ finally{pendingSaves--;}
 }
 // trusted: this browser's own saved data keeps provenance; external JSON backups are always downgraded.
 function cleanImported(raw,{trusted=false}={}){
