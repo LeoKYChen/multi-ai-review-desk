@@ -26,13 +26,17 @@ const engines=(process.env.PW_ENGINES||'chromium,webkit').split(',');
 
     // Stale bridge records are swept on load; fresh ones (an active handoff) are kept.
     await context.addInitScript(()=>{if(sessionStorage.getItem('seeded'))return;sessionStorage.setItem('seeded','1');
-     localStorage.setItem('psd-dual-ai-return:'+'c'.repeat(32),JSON.stringify({nonce:'c'.repeat(32),text:'x'.repeat(1000),createdAt:Date.now()-3600000}));
+     localStorage.setItem('psd-dual-ai-return:'+'c'.repeat(32),JSON.stringify({nonce:'c'.repeat(32),text:'x'.repeat(1000),createdAt:Date.now()-8*24*3600000}));
+     localStorage.setItem('psd-dual-ai-return:'+'f'.repeat(32),JSON.stringify({nonce:'f'.repeat(32),text:'late',createdAt:Date.now()-3600000}));
+     localStorage.setItem('psd-dual-ai-handoff:'+'a'.repeat(32),JSON.stringify({nonce:'a'.repeat(32),createdAt:Date.now()-3600000}));
      localStorage.setItem('psd-dual-ai-ack:'+'d'.repeat(32),'not json');
      localStorage.setItem('psd-dual-ai-handoff:'+'e'.repeat(32),JSON.stringify({nonce:'e'.repeat(32),createdAt:Date.now()}));});
     const a=await open();
-    assert.equal(await a.evaluate(()=>localStorage.getItem('psd-dual-ai-return:'+'c'.repeat(32))),null,'stale return record removed');
+    assert.equal(await a.evaluate(()=>localStorage.getItem('psd-dual-ai-return:'+'c'.repeat(32))),null,'week-old return record removed');
     assert.equal(await a.evaluate(()=>localStorage.getItem('psd-dual-ai-ack:'+'d'.repeat(32))),null,'unreadable bridge record removed');
     assert.notEqual(await a.evaluate(()=>localStorage.getItem('psd-dual-ai-handoff:'+'e'.repeat(32))),null,'fresh handoff kept');
+    assert.notEqual(await a.evaluate(()=>localStorage.getItem('psd-dual-ai-return:'+'f'.repeat(32))),null,'hour-old return kept for a reopened practice page');
+    assert.equal(await a.evaluate(()=>localStorage.getItem('psd-dual-ai-handoff:'+'a'.repeat(32))),null,'hour-old handoff removed');
 
     // Tab B is opened before tab A creates anything, so its in-memory state is stale.
     const b=await open();
