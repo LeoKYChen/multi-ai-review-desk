@@ -6,7 +6,7 @@ const decisions={accept_chatgpt:'採納 ChatGPT',accept_gemini:'採納 Gemini',p
 const statuses={new:'未開始',running:'審查中',awaiting_human:'待人工核定',needs_rework:'退回重議',closed:'已由人類結案'};
 const STORAGE_KEY='multi-ai-v0.8-offline-data';
 const MAX_LOCAL_TASKS=200,MAX_DOCX_BYTES=3*1024*1024, MAX_XML_BYTES=7*1024*1024, MAX_TEXT=50000,MAX_JSON_BYTES=8*1024*1024;
-const BRIDGE_PROTOCOL="psd-dual-ai-v1",BRIDGE_ORIGIN="https://leokychen.github.io",BRIDGE_STALE_MS=10*60*1000;
+const BRIDGE_PROTOCOL="psd-dual-ai-v1",BRIDGE_ORIGIN="https://leokychen.github.io",BRIDGE_STALE_MS=10*60*1000,BRIDGE_RETURN_STALE_MS=7*24*60*60*1000;
 const bridgeNonce=new URLSearchParams(location.hash.slice(1)).get("psd-bridge");
 const bridgeEnabled=Boolean(bridgeNonce&&/^[0-9a-f]{32}$/.test(bridgeNonce)&&location.origin===BRIDGE_ORIGIN);
 const bridgeHandoffKey=bridgeEnabled?'psd-dual-ai-handoff:'+bridgeNonce:null;
@@ -375,7 +375,7 @@ async function createImported(payload,{manual=false,category='一般',importedFr
   // An automatic handoff never takes over the task the user is looking at.
   const oldId=state.selectedId;state.tasks.push(t);if(manual||!selected())state.selectedId=t.id;render();
   if(!await save()){state.tasks=state.tasks.filter(x=>x.id!==t.id);state.selectedId=oldId;render();throw Error('本機空間無法儲存任務');}
-  if(!manual){bridgeReceived=true;bridgeTaskId=t.id;$('bridge-status').textContent='此任務來自學習平臺。完成六份意見並人工核定後，可按「回傳雙 AI 意見至學習平臺」；回傳前請保持原練習頁面開啟。';$('handoff-message').textContent='已從學習平臺匯入「'+t.title+'」。';}
+  if(!manual){bridgeReceived=true;bridgeTaskId=t.id;$('bridge-status').textContent='此任務來自學習平臺。完成六份意見並人工核定後，可按「回傳雙 AI 意見至學習平臺」；原練習頁若已關閉，重新開啟該頁即可寫回（一週內有效）。';$('handoff-message').textContent='已從學習平臺匯入「'+t.title+'」。';}
   render();
   if(!manual)bridgeSend('created');
   notice(state.selectedId===t.id?'已匯入「'+t.title+'」。':'已從學習平臺匯入「'+t.title+'」，可在左側任務清單點選（標示「來自平臺」）。');
@@ -420,9 +420,12 @@ $('bridge-return').addEventListener('click',()=>{
  const t=selected();if(!bridgeEnabled||!t||t.id!==bridgeTaskId){notice('此任務沒有有效的來源連線');return;}
  try{
   const result=reviewForLearning(t);
-  localStorage.setItem(bridgeReturnKey,JSON.stringify({nonce:bridgeNonce,text:result,createdAt:Date.now()}));
+  // The stored copy reaches a reopened practice page; a full quota must not also block the direct message.
+  let stored=true;
+  try{localStorage.setItem(bridgeReturnKey,JSON.stringify({nonce:bridgeNonce,text:result,createdAt:Date.now()}));}catch{stored=false;}
+  if(!stored&&!window.opener){notice('瀏覽器儲存空間不足，且原練習頁已關閉，無法回傳。請先「匯出紀錄（MD）」保存，或清出空間後再試。');return;}
   bridgeSend('return',{text:result});
-  $('bridge-status').textContent='已送出回傳請求，請在原本的學習平臺視窗確認是否保存。';
+  $('bridge-status').textContent=stored?'已送出回傳請求，請在原本的學習平臺視窗確認是否保存；若原練習頁已關閉，重新開啟該頁時會詢問是否寫回。':'已直接送出回傳請求，請在原本的學習平臺視窗確認是否保存。儲存空間不足，若原練習頁關閉將無法補寫，請先匯出 MD 備份。';
  }catch(e){notice(e.message);}
 });
 
@@ -446,11 +449,11 @@ $('api-next').addEventListener('click',()=>runAPI(false));$('api-all').addEventL
 $('api-stop').addEventListener('click',()=>{stopRequested=true;apiController?.abort();apiStatus('正在停止；不會送出下一次請求。');});
 $('clear-keys').addEventListener('click',()=>{for(const p of providers)$('key-'+p).value='';apiStatus('已清除本次金鑰。');});
 window.addEventListener('pagehide',()=>{stopRequested=true;apiController?.abort();for(const p of providers)$('key-'+p).value='';});
-// The learning platform shares this origin's storage quota and ignores bridge records older than two
-// minutes; drop leftovers (e.g. a return whose source tab was closed) so they cannot crowd out its saves.
+// The learning platform shares this origin's storage quota; drop stale leftovers so they cannot crowd out
+// its saves. A return is kept for a week so a reopened practice page can still write it back.
 function sweepBridgeKeys(){
  try{const now=Date.now(),keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^psd-dual-ai-(handoff|return|ack):/.test(k||''))keys.push(k);}
- for(const k of keys){let at=NaN;try{at=JSON.parse(localStorage.getItem(k))?.createdAt;}catch{}if(!Number.isFinite(at)||now-at>BRIDGE_STALE_MS)localStorage.removeItem(k);}}catch{}
+ for(const k of keys){let at=NaN;try{at=JSON.parse(localStorage.getItem(k))?.createdAt;}catch{}if(!Number.isFinite(at)||now-at>(k.startsWith('psd-dual-ai-return:')?BRIDGE_RETURN_STALE_MS:BRIDGE_STALE_MS))localStorage.removeItem(k);}}catch{}
 }
 async function consumeHandoff(){
  if(!bridgeEnabled||bridgeReceived)return;
