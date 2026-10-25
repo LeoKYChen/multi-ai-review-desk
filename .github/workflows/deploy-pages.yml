@@ -27,12 +27,15 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
       - run: node verification/dual-ai-handoff.cjs
-      - run: npm install --no-save --no-package-lock playwright@1.56.1
       - run: npx playwright install --with-deps chromium webkit
       - run: node verification/ios-handoff-layout.cjs
       - run: node verification/manual-review-default.cjs
       - run: node verification/multi-tab-sync.cjs
+      - run: node verification/manual-options.cjs
 
   deploy:
     needs: test
@@ -47,17 +50,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check application script syntax
-        run: |
-          node --input-type=commonjs <<'JS'
-          const fs = require('node:fs');
-          const vm = require('node:vm');
-          const html = fs.readFileSync('docs/index.html', 'utf8');
-          const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
-          if (!scripts.length) throw new Error('Application script is missing');
-          for (const [, source] of scripts) new vm.Script(source);
-          console.log('Application syntax checked');
-          JS
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

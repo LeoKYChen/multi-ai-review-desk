@@ -3,13 +3,19 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs/index.html'
-      - 'verification/dual-ai-handoff.cjs'
+      - 'docs/**'
+      - 'verification/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'eslint.config.mjs'
       - '.github/workflows/dual-ai-handoff.yml'
   pull_request:
     paths:
-      - 'docs/index.html'
-      - 'verification/dual-ai-handoff.cjs'
+      - 'docs/**'
+      - 'verification/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'eslint.config.mjs'
       - '.github/workflows/dual-ai-handoff.yml'
 permissions:
   contents: read
@@ -17,8 +23,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
+          cache: npm
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npm run lint
       - run: node verification/dual-ai-handoff.cjs

@@ -1,11 +1,10 @@
 'use strict';
-const assert=require('node:assert/strict'),fs=require('node:fs'),http=require('node:http'),path=require('node:path');
+const assert=require('node:assert/strict'),http=require('node:http');
 const {chromium,webkit}=require('playwright');
+const {serveDocs}=require('./serve-docs.cjs');
 (async()=>{
  const server=http.createServer((req,res)=>{
-  const p=new URL(req.url,'http://local').pathname;
-  if(!['/','/index.html'].includes(p)){res.writeHead(404).end();return;}
-  res.setHeader('content-type','text/html; charset=utf-8');res.end(fs.readFileSync(path.join(__dirname,'../docs/index.html')));
+  if(!serveDocs(req,res))res.writeHead(404).end();
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{

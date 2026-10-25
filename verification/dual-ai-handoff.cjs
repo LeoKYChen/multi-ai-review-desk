@@ -1,10 +1,10 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
-const html=fs.readFileSync(path.resolve(__dirname,'../docs/index.html'),'utf8');
-const js=html.match(/<script>([\s\S]*?)<\/script>/);
-assert(js&&js[1],'embedded application script found');
-new vm.Script(js[1],{filename:'docs/index.html:inline'});
-assert(html.includes('id="bridge-return"'));
+const page=fs.readFileSync(path.resolve(__dirname,'../docs/index.html'),'utf8');
+const html=fs.readFileSync(path.resolve(__dirname,'../docs/app.js'),'utf8');
+assert(/<script src="app\.js(\?[^"]*)?"><\/script>/.test(page),'page loads the application script');
+new vm.Script(html,{filename:'docs/app.js'});
+assert(page.includes('id="bridge-return"'));
 assert(html.includes('const BRIDGE_PROTOCOL="psd-dual-ai-v1"'));
 assert(html.includes('event.origin!==BRIDGE_ORIGIN||event.source!==window.opener'),'check origin and opener');
 assert(html.includes('bridgeNonce')&&html.includes('d.nonce!==bridgeNonce'),'check per-window nonce');
