@@ -4,12 +4,12 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="description" content="預設手動審查的雙 AI 協作工作臺：獨立分析、交叉評論、修訂與人工核定，紀錄保存在你的瀏覽器。">
-<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.15 手動審查版</title>
+<meta name="color-scheme" content="light"><title>Multi-AI 雙 AI 協作工作臺｜v0.16 手動審查版</title>
 <link rel="stylesheet" href="style.css?v=0.16">
 </head>
 <body>
 <main>
-<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">手動複製貼回 · 六階段審查 · 本機保存</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.15 · 預設手動審查</span></div></header>
+<header class="top"><div class="identity"><div class="symbol">↔</div><div><h1>Multi-AI 協作工作臺</h1><div class="sub">手動複製貼回 · 六階段審查 · 本機保存</div></div></div><div class="row"><span id="storage-state" class="pill">檢查儲存狀態…</span><span class="pill">v0.16 · 預設手動審查</span></div></header>
 <section class="intro"><div><div class="eyebrow">MULTI-AI REVIEW / YOUR WORKSPACE</div><h2>兩個 AI 協作，最後由你決定。</h2><p>從一份文件或一個問題開始，讓不同觀點彼此檢驗，留下可回查的討論與決定。</p></div><div class="intro-mark">獨立思考 · 交互檢驗 · 人工核定</div></section>
 <div class="workflow-strip" aria-label="工作流程"><div><span>01</span><div><strong>分別分析</strong><small>兩家模型各自提出初稿</small></div></div><div><span>02</span><div><strong>交叉審查</strong><small>交換觀點，找出缺漏</small></div></div><div><span>03</span><div><strong>修訂與核定</strong><small>各自修訂，由你決定</small></div></div></div>
 <div class="warning">任務儲存在這個瀏覽器（未加密），請定期備份 JSON。預設手動審查，不需 API 金鑰：複製提示詞到對應 AI 網頁，再貼回完整回覆。請自行確認可傳送的資料範圍。</div>
@@ -57,12 +57,13 @@
 <h3 style="margin-top:18px">文件擷取文字（唯讀）</h3><div id="source" class="view"></div>
 <div class="divider"></div>
 <div class="row between"><h3>雙 AI 審查</h3><button id="begin" type="button">開始本回合</button></div>
-<p class="sub">預設手動複製貼回，依序完成兩個 AI 各三階段的意見。需要 API 自動執行時，請在上方操作模式選擇進階選項；API 每回合固定兩家服務與模型。</p>
+<div class="manual-services" aria-label="本回合使用的 AI"><div class="field"><label for="manual-service-chatgpt">AI A</label><select id="manual-service-chatgpt"></select></div><div class="field"><label for="manual-service-gemini">AI B</label><select id="manual-service-gemini"></select></div></div>
+<p class="sub">開始本回合前可選擇兩家 AI（ChatGPT、Gemini、Claude）；開始後本回合固定。預設手動複製貼回，依序完成兩個 AI 各三階段的意見。需要 API 自動執行時，請在上方操作模式選擇進階選項；API 每回合固定兩家服務與模型。</p>
 <div id="api-controls" class="hidden"><div class="row"><button id="api-next" type="button">API 執行下一步</button><button id="api-all" type="button">API 執行剩餘步驟</button><button id="api-stop" type="button" class="danger" disabled>停止</button></div>
 <p id="api-status" class="sub" role="status" aria-live="polite">尚未呼叫 API。請先開始本回合。</p></div>
 <div class="bar"><div class="row between"><span class="count" id="progress-label">本回合尚未開始</span><span class="muted-small" id="phase-note"></span></div><div class="progress"><div id="progress-fill" style="width:0%"></div></div></div>
 <div id="manual-step" class="step hidden"><div class="count" id="stage-count"></div><h3 id="stage-heading"></h3>
-<div class="field"><label for="prompt">本階段完整提示詞</label><textarea id="prompt" rows="7" readonly></textarea></div>
+<div class="field"><label for="prompt">本階段完整提示詞</label><textarea id="prompt" rows="7" readonly aria-describedby="prompt-size"></textarea><div class="prompt-meta"><span id="prompt-size" class="muted-small" aria-live="polite"></span><label class="check"><input type="checkbox" id="compact-prompt"> 精簡模式（同一對話中使用）</label></div></div>
 <div class="button-row"><button id="copy" type="button" class="secondary">複製提示詞</button><button id="open-provider" type="button" class="secondary">開啟對應 AI 網頁</button></div>
 <div class="field" style="margin-top:17px"><label for="answer">貼入該 AI 的完整回覆</label><textarea id="answer" rows="6" maxlength="50000" placeholder="手動模式：貼入 AI 回覆；API 模式會自動儲存回覆。"></textarea></div>
 <button id="save-answer" type="button">儲存回覆，進入下一步</button></div>

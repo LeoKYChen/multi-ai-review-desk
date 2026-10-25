@@ -4,7 +4,7 @@
   "description": "Static dual-AI review desk published from docs/ to GitHub Pages.",
   "scripts": {
     "lint": "eslint .",
-    "test": "node verification/dual-ai-handoff.cjs && node verification/ios-handoff-layout.cjs && node verification/manual-review-default.cjs && node verification/multi-tab-sync.cjs"
+    "test": "node verification/dual-ai-handoff.cjs && node verification/ios-handoff-layout.cjs && node verification/manual-review-default.cjs && node verification/multi-tab-sync.cjs && node verification/manual-options.cjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

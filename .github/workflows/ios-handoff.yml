@@ -33,3 +33,4 @@ jobs:
       - run: node verification/ios-handoff-layout.cjs
       - run: node verification/manual-review-default.cjs
       - run: node verification/multi-tab-sync.cjs
+      - run: node verification/manual-options.cjs
