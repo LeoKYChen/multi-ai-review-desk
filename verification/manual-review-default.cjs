@@ -1,11 +1,11 @@
 'use strict';
 // Extends the unmerged PR #7 roundtrip scenario without modifying its branch.
 const assert=require('node:assert/strict');
-const fs=require('node:fs');
 const http=require('node:http');
 const path=require('node:path');
 const {chromium,webkit}=require('playwright');
 const {readState}=require('./idb-state.cjs');
+const {serveDocs}=require('./serve-docs.cjs');
 // Existing restore marks all outputs imported_unverified and keeps binding on participants.
 const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const t of copy.tasks)for(const r of t.rounds)for(const o of r.outputs){delete o.source;delete o.service;delete o.model;delete o.number;}return copy;};
 
@@ -17,9 +17,7 @@ const reviewContent=data=>{const copy=JSON.parse(JSON.stringify(data));for(const
    res.end('<!doctype html><title>mock exam source</title><script>void localStorage.length;window.received=[];window.addEventListener("storage",e=>{if(e.key&&e.key.startsWith("psd-dual-ai-"))window.received.push({key:e.key,value:e.newValue});});</script>');
    return;
   }
-  if(p!=='/'&&p!=='/index.html'){res.writeHead(404).end();return;}
-  res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
-  res.end(fs.readFileSync(path.join(__dirname,'../docs/index.html')));
+  if(!serveDocs(req,res))res.writeHead(404).end();
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{

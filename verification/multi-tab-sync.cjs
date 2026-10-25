@@ -1,16 +1,15 @@
 'use strict';
 // Two desk tabs, unsaved drafts, provenance after reload, API binding after a failed call,
 // and cleanup of stale bridge records. Mocked API only: no real keys or paid calls.
-const assert=require('node:assert/strict'),fs=require('node:fs'),http=require('node:http'),path=require('node:path');
+const assert=require('node:assert/strict'),http=require('node:http');
 const playwright=require('playwright');
 const {readState}=require('./idb-state.cjs');
+const {serveDocs}=require('./serve-docs.cjs');
 const KEY='multi-ai-v0.8-offline-data';
 const engines=(process.env.PW_ENGINES||'chromium,webkit').split(',');
 (async()=>{
  const server=http.createServer((req,res)=>{
-  const p=new URL(req.url,'http://local').pathname;
-  if(!['/','/index.html'].includes(p)){res.writeHead(404).end();return;}
-  res.writeHead(200,{'content-type':'text/html; charset=utf-8'});res.end(fs.readFileSync(path.join(__dirname,'../docs/index.html')));
+  if(!serveDocs(req,res))res.writeHead(404).end();
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const origin='http://127.0.0.1:'+server.address().port;

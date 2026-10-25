@@ -2,18 +2,18 @@ name: iOS dual AI handoff and mobile layout
 on:
   pull_request:
     paths:
-      - 'docs/index.html'
-      - 'verification/ios-handoff-layout.cjs'
-      - 'verification/manual-review-default.cjs'
-      - 'verification/multi-tab-sync.cjs'
+      - 'docs/**'
+      - 'verification/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/ios-handoff.yml'
   push:
     branches: [main]
     paths:
-      - 'docs/index.html'
-      - 'verification/ios-handoff-layout.cjs'
-      - 'verification/manual-review-default.cjs'
-      - 'verification/multi-tab-sync.cjs'
+      - 'docs/**'
+      - 'verification/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/ios-handoff.yml'
   workflow_dispatch:
 permissions:
@@ -27,7 +27,8 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - run: npm install --no-save --no-package-lock playwright@1.56.1
+          cache: npm
+      - run: npm ci
       - run: npx playwright install --with-deps chromium webkit
       - run: node verification/ios-handoff-layout.cjs
       - run: node verification/manual-review-default.cjs

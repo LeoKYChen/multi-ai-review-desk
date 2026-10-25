@@ -36,6 +36,19 @@
 
 部署只接受 `main`；網站變更合併後由現有工作流程自動發佈，也可手動執行。選擇進階 API 模式時，須自行確認服務的連線與金鑰限制。
 
+## 開發
+
+網站仍是純靜態檔案，不需要建置：`docs/index.html`（版面）、`docs/style.css`（樣式）、`docs/app.js`（程式）。
+
+```sh
+npm ci                                  # 安裝 ESLint 與 Playwright
+npx playwright install chromium webkit  # 首次執行瀏覽器驗收前
+npm run lint                            # ESLint 檢查
+npm test                                # 靜態檢查與全部瀏覽器驗收
+```
+
+修改 `app.js` 或 `style.css` 時，請同步更新 `index.html` 中的 `?v=` 版本參數，避免瀏覽器沿用舊快取。
+
 ## 驗證狀態
 
 - Sites 版本已完成瀏覽器建立任務及交叉審查提示詞銜接檢查。
